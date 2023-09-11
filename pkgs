@@ -1,0 +1,20 @@
+bash
+binutils binutils-$arch-linux-gnu
+bzip2
+coreutils
+cpio
+cpp-13 cpp-13-$arch-linux-gnu
+dash
+dpkg
+fakeroot
+findutils
+g++-13 g++-13-$arch-linux-gnu
+gcc-13 gcc-13-$arch-linux-gnu
+gzip
+libfakeroot
+lz4
+lzip
+lzop
+make
+tar
+xz-utils

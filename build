@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+
+set -exuo pipefail
+
+main() (
+	source="$1"
+	shift
+
+	patches=()
+
+	while [ $# -gt 0 ]; do
+		patches+=("$1")
+		shift
+	done
+
+	if [[ "$source" = "git+"* ]]; then
+		git_source "${source#git+}"
+	else
+		apt_source "$source"
+	fi
+
+	cd src
+
+	for patch in "${patches[@]}"; do
+		apply_patches "$patch"
+	done
+
+	name="$(dpkg-parsechangelog --show-field Source)"
+	version="$(dpkg-parsechangelog --show-field Version)"
+	version_orig="${version%-*}"
+	gzip < ../orig.tar > "../${name}_${version_orig}.orig.tar.gz"
+	rm ../orig.tar
+	
+	sudo apt-get build-dep --no-install-recommends -y .
+	dpkg-buildpackage --no-sign
+
+	cd ..
+	rm -rf src
+	ls -lah
+)
+
+apt_source() (
+	apt-get source --only-source --download-only "$1"
+	orig=(*.orig.tar.*)
+	debian=(*.debian.tar.*)
+	dsc=(*.dsc)
+	auto_decompress "$orig" > orig.tar
+	mkdir src
+	tar -C src -x --strip-components 1 < orig.tar
+	auto_decompress "$debian" | tar -C src -xv
+	rm "$orig" "$debian" "$dsc"
+)
+
+git_source() (
+	IFS='#' read -r url ref <<< "$1"
+	git clone --bare --branch "$ref" --depth 1 "$url" src.git
+	GIT_DIR=src.git git archive --prefix src/ "$ref" > orig.tar
+	rm -rf src.git
+	tar -x < orig.tar
+)
+
+auto_decompress() (
+	case "${1##*.}" in
+		gz)
+			gzip -d < "$1"
+			;;
+		xz)
+			xz -d < "$1"
+			;;
+		*)
+			exit 1
+			;;
+	esac
+)
+
+apply_patches() (
+	git_dir="$(realpath $(mktemp -u ../patches.tmp.XXXX))"
+	if [[ "$1" = "git+"* ]]; then
+		IFS='#' read -r url ref <<< "${1#git+}"
+		git clone --branch "$ref" --depth 1 "$url" "$git_dir"
+		dir="$git_dir"
+	else
+		dir="$(cd .. && realpath "$1")"
+	fi
+
+	if [ -x "$dir/exec.pre" ]; then
+		SOURCE="$source" "$dir/exec.pre"
+	fi
+
+	while read -r patch; do
+		patch -p1 < "$dir/patches/$patch"
+	done < "$dir/patches/series"
+
+	version="$(dpkg-parsechangelog --show-field Version)"
+	email="$(yq -r .email < "$dir/changelog_config.yaml")"
+	name="$(yq -r .name < "$dir/changelog_config.yaml")"
+	distribution="$(yq -r .distribution < "$dir/changelog_config.yaml")"
+	version_suffix="$(yq -r .version_suffix < "$dir/changelog_config.yaml")"
+	message="$(yq -r .message < "$dir/changelog_config.yaml")"
+	DEBEMAIL="$email" DEBFULLNAME="$name" dch --newversion "$version$version_suffix" --distribution "$distribution" --force-distribution -- "$message"
+
+	if [ -x "$dir/exec.post" ]; then
+		SOURCE="$source" "$dir/exec.post"
+	fi
+
+	[ ! -e "$git_dir" ] || rm -rf "$git_dir"
+)
+
+main "$@"

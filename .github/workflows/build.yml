@@ -1,0 +1,54 @@
+on: push
+jobs:
+  build:
+    name: build (host=${{ matrix.host }}, target=${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        host: [ amd64, arm64v8 ]
+        target: [ amd64, arm64v8 ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup
+        run: |
+          ls -lah /proc/sys/fs/binfmt_misc
+          wget -q http://deb.debian.org/debian/pool/main/q/qemu/qemu-user-static_8.0.4+dfsg-3+b1_amd64.deb
+          sudo dpkg -i qemu-user-static_8.0.4+dfsg-3+b1_amd64.deb
+          sudo dd bs=1M if=/usr/lib/binfmt.d/qemu-aarch64.conf of=/proc/sys/fs/binfmt_misc/register
+          ls -lah /proc/sys/fs/binfmt_misc
+      - name: build
+        run: |
+          set -x
+          if [ ${{ matrix.host }} = ${{ matrix.target }} ]; then
+            podman build --build-arg arch=${{ matrix.host }} -f build.containerfile -t ghcr.io/${{ github.repository }}/${{ matrix.host }}:${{ matrix.target }} .
+          else
+            case ${{ matrix.target }} in
+              amd64) gnu_arch=x86-64 ;;
+              arm64v8) gnu_arch=aarch64 ;;
+            esac
+            podman build --build-arg native_arch=${{ matrix.host }} --build-arg target_arch=${{ matrix.target }} --build-arg gnu_arch=$gnu_arch -f crossbuild.containerfile -t ghcr.io/${{ github.repository }}/${{ matrix.host }}:${{ matrix.target }} .
+          fi
+      - name: publish
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          podman login -u token -p ${{ github.token }} ghcr.io
+          podman push ghcr.io/${{ github.repository }}/${{ matrix.host }}:${{ matrix.target }}
+          podman inspect ghcr.io/${{ github.repository }}/${{ matrix.host }}:${{ matrix.target }}
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+      - name: publish
+        run: |
+          podman login -u token -p ${{ github.token }} ghcr.io
+          podman manifest create ghcr.io/${{ github.repository }}:amd64
+          podman manifest add --arch amd64 ghcr.io/${{ github.repository }}:amd64 ghcr.io/${{ github.repository }}/amd64:amd64
+          podman manifest add --arch arm64 ghcr.io/${{ github.repository }}:amd64 ghcr.io/${{ github.repository }}/arm64v8:amd64
+          podman push ghcr.io/${{ github.repository }}:amd64
+          podman manifest inspect ghcr.io/${{ github.repository }}:amd64
+          podman manifest create ghcr.io/${{ github.repository }}:arm64v8
+          podman manifest add --arch amd64 ghcr.io/${{ github.repository }}:arm64v8 ghcr.io/${{ github.repository }}/amd64:arm64v8
+          podman manifest add --arch arm64 ghcr.io/${{ github.repository }}:arm64v8 ghcr.io/${{ github.repository }}/arm64v8:arm64v8
+          podman push ghcr.io/${{ github.repository }}:arm64v8
+          podman manifest inspect ghcr.io/${{ github.repository }}:arm64v8

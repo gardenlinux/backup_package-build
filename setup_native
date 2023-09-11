@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+set -eufo pipefail
+
+function is_elf (
+	[ "$(od -A n -t x1 -N 4 "$1" | tr -d ' ')" = "7f454c46" ]
+)
+
+function elf_arch (
+	case "$(od -A n -t d1 -j 5 -N 1 "$1" | tr -d ' ')" in
+		1)
+			endian=little
+			;;
+		2)
+			endian=big
+			;;
+	esac
+	case "$(od --endian "$endian" -A n -t x2 -j 18 -N 2 "$1" | tr -d ' ')" in
+		0003)
+			arch=i686
+			;;
+		003e)
+			arch=x86_64
+			;;
+		00b7)
+			arch=aarch64
+			;;
+	esac
+	echo "$arch"
+)
+
+function export_elf (
+	file="$1"
+	if [[ "$(basename "$file")" = libfakeroot-*.so ]]; then
+		new_file="/native/fakeroot/$(basename "$file")"
+	else
+		new_file="/native/$(basename "$file")"
+	fi
+	[ ! -e "$new_file" ]
+	bbe -e 's|/usr/lib/gcc-cross/|///////usr/lib/gcc/|;s|/usr/libexec/gcc-cross/|///////usr/libexec/gcc/|' < "$file" > "$new_file"
+	if [ -x "$file" ]; then
+		chmod +x "$new_file"
+	fi
+	patchelf --remove-rpath "$new_file"
+	if interpreter="$(patchelf --print-interpreter "$new_file" 2> /dev/null)"; then
+		new_interpreter="/native/$(basename "$interpreter")"
+		[ -e "$new_interpreter" ] || export_elf "$interpreter"
+		chmod 755 "$new_interpreter"
+		patchelf --set-interpreter "$new_interpreter" "$new_file"
+	fi
+	patchelf --print-needed "$new_file" | while read lib; do
+		lib_path="$(realpath "$(ldconfig -p | grep "^\s*$lib " | awk -F ' => ' '{ print $2 }' | head -n 1)")"
+		new_lib="/native/$(basename "$lib_path")"
+		[ -e "$new_lib" ] || export_elf "$lib_path"
+		patchelf --replace-needed "$lib" "$new_lib" "$new_file"
+	done
+
+	echo "exported $file -> $new_file"
+	ldd "$new_file" 2> /dev/null || true
+)
+
+function export {
+	mkdir -p /native/fakeroot
+	dpkg -L "$@" | while read -r file; do
+		if [ -n "$file" ] && [ -f "$file" ]; then
+			realpath "$file"
+		fi
+	done | sort -u | while read -r file; do
+		if [ -n "$file" ] && { [[ "$(stat -c '%A' "$file")" =~ -..x.* ]] || [[ "$file" = /usr/libexec/gcc*plugin.so* ]] || [[ "$(basename "$file")" = libfakeroot-*.so ]]; } && is_elf "$file" && [ "$(basename "$file")" != uname ] && [ "$(basename "$file")" != dpkg ]; then
+			export_elf "$file"
+		fi
+	done
+}
+
+function import {
+	dpkg -L "$@" | while read -r file; do
+		if [ -n "$file" ] && [ -f "$file" ]; then
+			realpath "$file"
+		fi
+	done | sort -u | while read -r file; do
+		if [ -n "$file" ] && { [[ "$(stat -c '%A' "$file")" =~ -..x.* ]] || [[ "$file" = /usr/libexec/gcc*plugin.so* ]]; } && is_elf "$file"; then
+			native_file="/native/$(basename "$file")"
+			if [ -e "$native_file" ]; then
+				cat < "$native_file" > "$file"
+				echo "imported $native_file -> $file"
+			fi
+		fi
+		if [ -n "$file" ] && [[ "$(stat -c '%A' "$file")" =~ -..x.* ]] && [[ "$(basename "$file")" = fakeroot-* ]]; then
+			sed -i 's|LD_LIBRARY_PATH=|LD_LIBRARY_PATH=/native/fakeroot:|g' "$file"
+		fi
+	done
+}
+
+action="$1"
+shift
+
+"$action" "$@"
