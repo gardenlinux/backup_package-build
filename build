@@ -3,6 +3,19 @@
 set -exuo pipefail
 
 main() (
+	debian_source=
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--debian-source)
+				debian_source="$2"
+				shift 2
+				;;
+			*)
+				break
+				;;
+		esac
+	done
+
 	source="$1"
 	shift
 
@@ -17,6 +30,20 @@ main() (
 		git_source "${source#git+}"
 	else
 		apt_source "$source"
+	fi
+
+	if [ -n "$debian_source" ]; then
+		mkdir debian_src
+		cd debian_src
+		if [[ "$debian_source" = "git+"* ]]; then
+			git_source "${debian_source#git+}"
+		else
+			apt_source "$debian_source"
+		fi
+		rm -rf ../src/debian
+		mv src/debian ../src/
+		cd ..
+		rm -rf debian_src
 	fi
 
 	cd src
@@ -87,11 +114,14 @@ apply_patches() (
 		SOURCE="$source" "$dir/exec.pre"
 	fi
 
-	while read -r patch; do
-		patch -p1 < "$dir/patches/$patch"
-	done < "$dir/patches/series"
+	if [ -f "$dir/patches/series" ]; then
+		while read -r patch; do
+			patch -p1 < "$dir/patches/$patch"
+		done < "$dir/patches/series"
+	fi
 
-	version="$(dpkg-parsechangelog --show-field Version)"
+	version="$(yq -r .version < "$dir/changelog_config.yaml")"
+	[ "$version" != null ] || version="$(dpkg-parsechangelog --show-field Version)"
 	email="$(yq -r .email < "$dir/changelog_config.yaml")"
 	name="$(yq -r .name < "$dir/changelog_config.yaml")"
 	distribution="$(yq -r .distribution < "$dir/changelog_config.yaml")"
