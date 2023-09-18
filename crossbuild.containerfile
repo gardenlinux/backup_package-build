@@ -31,4 +31,5 @@ RUN find /tmp -mindepth 1 -delete
 COPY --from=mini_sudo /usr/local/bin/sudo /usr/local/bin/sudo
 RUN groupadd dev && useradd -m -g dev dev
 USER dev
-WORKDIR /home/dev
+RUN mkdir /home/dev/work
+WORKDIR /home/dev/work

@@ -59,7 +59,7 @@ main() (
 	rm ../orig.tar
 	
 	sudo apt-get build-dep --no-install-recommends -y .
-	dpkg-buildpackage --no-sign
+	DEB_BUILD_OPTIONS="terse ${DEB_BUILD_OPTIONS-}" dpkg-buildpackage --no-sign
 
 	cd ..
 	rm -rf src
