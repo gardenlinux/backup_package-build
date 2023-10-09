@@ -22,6 +22,7 @@ WORKDIR /tmp
 COPY debian-src.sources /etc/apt/sources.list.d/
 COPY pkgs ./
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y build-essential ca-certificates debhelper devscripts git yq $(awk '{ print $1 }' pkgs)
+RUN apt-mark hold $(awk '{ print $1 }' pkgs)
 COPY --from=native /native /native
 COPY setup_native ./
 RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ print $1 }' pkgs)" ]
