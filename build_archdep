@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -exuo pipefail
+
+exec 3>&1
+exec 1>&2
+
+main() (
+	dsc="$(realpath "$1")"
+	dpkg_arch="$(dpkg --print-architecture)"
+	dsc_arch="$(grep -oP '(?<=^Architecture: ).*' < "$dsc" | tr ' ' '\n')"
+
+	grep -P '^(linux-)?(any|'"$dpkg_arch"')$' <<< "$dsc_arch" || exit 0
+
+	sudo apt-get build-dep --no-install-recommends -y "$dsc"
+
+	dpkg-source --extract "$dsc" src
+	cd src
+	name="$(dpkg-parsechangelog --show-field Source)"
+	version="$(dpkg-parsechangelog --show-field Version)"
+	DEB_BUILD_OPTIONS="terse ${DEB_BUILD_OPTIONS-}" dpkg-buildpackage --no-sign --build=any
+	cd ..
+	rm -rf src
+	ls -lah
+
+	echo "${name}_${version}_${dpkg_arch}" >&3
+)
+
+main "$@"

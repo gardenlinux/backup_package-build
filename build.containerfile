@@ -15,6 +15,9 @@ COPY pkgs ./
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y build-essential ca-certificates debhelper devscripts git sudo yq $(awk '{ print $1 }' pkgs)
 RUN apt-mark hold $(awk '{ print $1 }' pkgs)
 RUN gcc --print-search-dir && echo 'int main() { return 0; }' > main.c && gcc -o main main.c && ./main
+COPY build_source /usr/local/bin/
+COPY build_indep /usr/local/bin/
+COPY build_archdep /usr/local/bin/
 COPY build /usr/local/bin/
 RUN find /tmp -mindepth 1 -delete
 COPY --from=mini_sudo /usr/local/bin/sudo /usr/local/bin/sudo

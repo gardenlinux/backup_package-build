@@ -4,18 +4,14 @@ jobs:
     name: build (host=${{ matrix.host }}, target=${{ matrix.target }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         host: [ amd64, arm64v8 ]
         target: [ amd64, arm64v8 ]
     steps:
       - uses: actions/checkout@v3
-      - name: setup
-        run: |
-          ls -lah /proc/sys/fs/binfmt_misc
-          wget -q http://deb.debian.org/debian/pool/main/q/qemu/qemu-user-static_8.0.4+dfsg-3+b1_amd64.deb
-          sudo dpkg -i qemu-user-static_8.0.4+dfsg-3+b1_amd64.deb
-          sudo dd bs=1M if=/usr/lib/binfmt.d/qemu-aarch64.conf of=/proc/sys/fs/binfmt_misc/register
-          ls -lah /proc/sys/fs/binfmt_misc
+      - name: setup binfmt
+        run: sudo podman run --privileged -v /proc/sys/fs/binfmt_misc:/proc/sys/fs/binfmt_misc "ghcr.io/gardenlinux/binfmt_container"
       - name: build
         run: |
           set -x
