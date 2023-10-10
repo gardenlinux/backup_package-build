@@ -20,6 +20,9 @@ RUN ./setup_native export $(sed 's/\$arch/'"$gnu_arch"'/' pkgs | awk '{ print $N
 FROM $target_arch/$image
 WORKDIR /tmp
 COPY debian-src.sources /etc/apt/sources.list.d/
+COPY local-pkgs.list /etc/apt/sources.list.d/
+COPY local-pkgs /etc/apt/preferences.d/
+RUN mkdir /pkgs && touch /pkgs/Packages
 COPY pkgs ./
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y build-essential ca-certificates debhelper devscripts git yq $(awk '{ print $1 }' pkgs)
 RUN apt-mark hold $(awk '{ print $1 }' pkgs)
