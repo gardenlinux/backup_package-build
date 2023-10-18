@@ -1,0 +1,147 @@
+name: build
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        default: ${{ github.repository }}
+      ref:
+        type: string
+        default: ${{ github.sha }}
+      build_container:
+        type: string
+        default: ghcr.io/gardenlinux/package-build
+      dependencies:
+        type: string
+        default: ""
+jobs:
+  source:
+    name: source package
+    outputs:
+      pkg: ${{ steps.build.outputs.pkg }}
+      build_options: ${{ steps.build.outputs.build_options }}
+      release: ${{ steps.release.outputs.release }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: gardenlinux/package-build
+      - run: mkdir input output
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          path: input
+      - name: pull build container
+        run: podman pull "${{ inputs.build_container }}:amd64"
+      - name: fetch dependencies
+        run: |
+          mkdir _pkgs
+          while IFS=@ read -r repo tag; do
+            ./gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
+              (cd _pkgs && wget "$url")
+            done
+          done <<< '${{ inputs.dependencies }}'
+          ls -lah _pkgs
+          (cd _pkgs && dpkg-scanpackages --multiversion . > Packages)
+          cat _pkgs/Packages
+      - name: build
+        id: build
+        run: |
+          pkg="$(podman run --rm -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:amd64" build_source)"
+          echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
+          echo "build_options=$(cat output/.build_options)" | tee -a "$GITHUB_OUTPUT"
+      - name: check if ${{ env.pkg }} already released
+        id: check
+        run: |
+          if ./gh_release "${{ github.token }}" "${{ github.repository }}" exists "${{ steps.build.outputs.pkg }}"; then
+            echo "skip_release=true" | tee "$GITHUB_OUTPUT"
+          else
+            echo "skip_release=false" | tee "$GITHUB_OUTPUT"
+          fi
+      - name: draft release and upload source packages
+        id: release
+        if: ${{ steps.check.outputs.skip_release != 'true' }}
+        run: |
+          release="$(./gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${{ steps.build.outputs.pkg }}" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
+          for f in output/*; do
+            ./gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
+          done
+          echo "release=$release" | tee "$GITHUB_OUTPUT"
+  packages:
+    name: ${{ matrix.target == 'indep' && 'architecture independent packages' || format('{0} binary packages', matrix.arch) }}
+    needs: source
+    if: ${{ needs.source.outputs.release != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [ indep, archdep ]
+        arch: [ amd64, arm64v8 ]
+        exclude:
+          - target: indep
+            arch: arm64v8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: gardenlinux/package-build
+      - name: setup binfmt
+        if: ${{ matrix.arch == 'arm64v8' }}
+        run: sudo podman run --privileged ghcr.io/gardenlinux/binfmt_container
+      - name: pull build container
+        run: podman pull "${{ inputs.build_container }}:${{ matrix.arch }}"
+      - name: get source package
+        run: |
+          mkdir input
+          cd input
+          pkg="${{ needs.source.outputs.pkg }}"
+          release="${{ needs.source.outputs.release }}"
+          ../gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$pkg.dsc"
+          awk '!/^ / { flag=0 } flag { print $NF } /^Files:/ { flag=1 }' < "$pkg.dsc" | while read -r file; do
+            ../gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$file"
+          done
+          echo "${{ needs.source.outputs.build_options }}" > .build_options
+          ln -s "$pkg.dsc" .source
+      - name: fetch dependencies
+        run: |
+          mkdir _pkgs
+          while IFS=@ read -r repo tag; do
+            ./gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
+              (cd _pkgs && wget "$url")
+            done
+          done <<< '${{ inputs.dependencies }}'
+          ls -lah _pkgs
+          (cd _pkgs && dpkg-scanpackages --multiversion . > Packages)
+          cat _pkgs/Packages
+      - name: build
+        id: build
+        run: |
+          mkdir output
+          pkg="$(podman run --rm -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:${{ matrix.arch }}" "build_${{ matrix.target }}")"
+          echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
+      - name: upload packages
+        if: ${{ steps.build.outputs.pkg != '' }}
+        run: |
+          release="${{ needs.source.outputs.release }}"
+          for f in output/*; do
+            ./gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
+          done
+  publish:
+    needs: [ source, packages ]
+    if: ${{ needs.source.outputs.release != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: gardenlinux/package-build
+      - name: publish drafted release
+        run: ./gh_release "${{ github.token }}" "${{ github.repository }}" publish_draft "${{ needs.source.outputs.release }}"
+  cleanup:
+    needs: [ source, packages ]
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: gardenlinux/package-build
+      - name: delete drafted release
+        run: ./gh_release "${{ github.token }}" "${{ github.repository }}" delete "${{ needs.source.outputs.release }}"

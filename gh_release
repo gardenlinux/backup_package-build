@@ -1,0 +1,104 @@
+#!/bin/bash
+
+set -eufo pipefail
+
+token="$1"; shift
+repo="$1"; shift
+
+curl_path="$(which curl)"
+
+function curl {
+	$curl_path -f -s -u "token:$token" "$@"
+}
+
+function get {
+	[ $# = 1 ]
+	curl -X GET "https://api.github.com/repos/$repo/$1"
+}
+
+function get_binary {
+	[ $# = 1 ]
+	curl -L -H "Accept: application/octet-stream" -X GET "https://api.github.com/repos/$repo/$1"
+}
+
+function post {
+	[ $# = 2 ]
+	curl -X POST "https://api.github.com/repos/$repo/$1" --data "$2"
+}
+
+function patch {
+	[ $# = 2 ]
+	curl -X PATCH "https://api.github.com/repos/$repo/$1" --data "$2"
+}
+
+function delete {
+	[ $# = 1 ]
+	curl -X DELETE "https://api.github.com/repos/$repo/$1"
+}
+
+function upload {
+	[ $# = 1 ]
+	curl -X POST -H "Content-Type: application/octet-stream" "https://uploads.github.com/repos/$repo/$1" --data-binary @-
+}
+
+action="$1"; shift
+
+case "$action" in
+	"exists")
+		tag="$1"; shift
+		get "releases/tags/$tag" > /dev/null
+
+		;;
+	"list")
+		tag="$1"; shift
+		get "releases/tags/$tag" | jq -r '.assets[] | .browser_download_url'
+
+		;;
+	"create")
+		draft=false
+		if [ "$1" = "--draft" ]; then
+			draft=true
+			shift
+		fi
+		tag="$1"; shift
+		commit="$1"; shift
+		name="$1"; shift
+
+		release="$(post "releases" '{
+			"draft": '"$draft"',
+			"tag_name": "'"$tag"'",
+			"target_commitish": "'"$commit"'",
+			"name": "'"$name"'"
+		}' | jq -r '.id')"
+
+		echo "$release"
+
+		;;
+	"upload")
+		release="$1"; shift
+		asset_file="$1"; shift
+
+		asset_name="$(basename "$asset_file")"
+		upload "releases/$release/assets?name=$asset_name" < "$asset_file" > /dev/null
+		echo "uploaded $asset_file to $release"
+
+		;;
+	"download")
+		release="$1"; shift
+		name="$1"; shift
+
+		asset_id="$(get "releases/$release/assets" | jq -r '.[] | select(.name == "'"$name"'") | .id')"
+		get_binary "releases/assets/$asset_id" > "$name"
+
+		;;
+	"publish_draft")
+		release="$1"; shift
+		patch "releases/$release" '{ "draft": false }'
+
+		;;
+	"delete")
+		release="$1"; shift
+		delete "releases/$release"
+
+		;;
+esac

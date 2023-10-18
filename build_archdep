@@ -6,24 +6,38 @@ exec 3>&1
 exec 1>&2
 
 main() (
-	dsc="$(realpath "$1")"
+	DEB_BUILD_OPTIONS="$(cat /input/.build_options)"
+	export DEB_BUILD_OPTIONS
+
+	dsc="$(realpath "/input/.source")"
 	dpkg_arch="$(dpkg --print-architecture)"
 	dsc_arch="$(grep -oP '(?<=^Architecture: ).*' < "$dsc" | tr ' ' '\n')"
 
 	grep -P '^(linux-)?(any|'"$dpkg_arch"')$' <<< "$dsc_arch" || exit 0
 
+	sudo apt-get update
 	sudo apt-get build-dep --no-install-recommends -y "$dsc"
 
 	dpkg-source --extract "$dsc" src
 	cd src
-	name="$(dpkg-parsechangelog --show-field Source)"
+	pkg="$(dpkg-parsechangelog --show-field Source)"
 	version="$(dpkg-parsechangelog --show-field Version)"
-	DEB_BUILD_OPTIONS="terse ${DEB_BUILD_OPTIONS-}" dpkg-buildpackage --no-sign --build=any
+	dpkg-buildpackage --no-sign --build=any
 	cd ..
 	rm -rf src
 	ls -lah
 
-	echo "${name}_${version}_${dpkg_arch}" >&3
+	if [ -d "/output" ]; then
+		{ echo "${pkg}_${version}_${dpkg_arch}.changes"; get_files < "${pkg}_${version}_${dpkg_arch}.changes"; } | while read file; do
+			sudo cp -d "$file" "/output/$file"
+		done
+	fi
+
+	echo "${pkg}_${version}_${dpkg_arch}" >&3
+)
+
+get_files() (
+	awk '!/^ / { flag=0 } flag { print $NF } /^Files:/ { flag=1 }'
 )
 
 main "$@"
