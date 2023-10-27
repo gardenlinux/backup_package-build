@@ -12,8 +12,7 @@ RUN apt-get update \
 
 FROM $arch/$image
 WORKDIR /tmp
-COPY debian-src.sources /etc/apt/sources.list.d/
-COPY local-pkgs.list /etc/apt/sources.list.d/
+COPY debian-src.sources local-pkgs.list /etc/apt/sources.list.d/
 COPY local-pkgs /etc/apt/preferences.d/
 RUN mkdir /pkgs && touch /pkgs/Packages
 COPY pkgs ./
