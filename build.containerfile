@@ -16,14 +16,19 @@ COPY debian-src.sources local-pkgs.list /etc/apt/sources.list.d/
 COPY local-pkgs /etc/apt/preferences.d/
 RUN mkdir /pkgs && touch /pkgs/Packages
 COPY pkgs ./
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y build-essential ca-certificates debhelper devscripts git sudo yq $(awk '{ print $1 }' pkgs)
-RUN apt-mark hold $(awk '{ print $1 }' pkgs)
-RUN gcc --print-search-dir && echo 'int main() { return 0; }' > main.c && gcc -o main main.c && ./main
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install \
+       --no-install-recommends -y build-essential ca-certificates \
+       debhelper devscripts git sudo yq $(awk '{ print $1 }' pkgs) \
+    && apt-mark hold $(awk '{ print $1 }' pkgs) \
+    && gcc --print-search-dir && echo 'int main() { return 0; }' > main.c \
+    && gcc -o main main.c \
+    && ./main \
+    && find /tmp -mindepth 1 -delete
 COPY build_source /usr/local/bin/
 COPY build_indep /usr/local/bin/
 COPY build_archdep /usr/local/bin/
 COPY build /usr/local/bin/
-RUN find /tmp -mindepth 1 -delete
 COPY --from=mini_sudo /usr/local/bin/sudo /usr/local/bin/sudo
 RUN groupadd dev && useradd -m -g dev dev
 USER dev
