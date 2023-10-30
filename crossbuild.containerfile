@@ -4,10 +4,12 @@ ARG target_arch=arm64v8
 
 FROM $native_arch/$image AS mini_sudo
 WORKDIR /tmp
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y gcc libc-dev
 COPY mini_sudo.c ./
-RUN gcc -Wall -Werror -static -o sudo mini_sudo.c
-RUN install -m 6755 sudo /usr/local/bin/sudo
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install \
+       --no-install-recommends -y gcc libc-dev \
+    && gcc -Wall -Werror -static -o sudo mini_sudo.c \
+    && install -m 6755 sudo /usr/local/bin/sudo
 
 FROM $native_arch/$image AS native
 ARG gnu_arch=aarch64
