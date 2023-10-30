@@ -33,7 +33,7 @@ WORKDIR /tmp
 COPY debian-src.sources local-pkgs.list /etc/apt/sources.list.d/
 COPY local-pkgs /etc/apt/preferences.d/
 
-# Install packages from pkgs list and mark them as held
+# Install packages from pkgs list and mark them as held, test gcc and cleanup
 COPY pkgs ./
 RUN mkdir /pkgs \
     && touch /pkgs/Packages \
@@ -41,7 +41,12 @@ RUN mkdir /pkgs \
     && DEBIAN_FRONTEND=noninteractive apt-get install \
        --no-install-recommends -y build-essential ca-certificates debhelper \
        devscripts git yq $(awk '{ print $1 }' pkgs) \
-    && apt-mark hold $(awk '{ print $1 }' pkgs)
+    && apt-mark hold $(awk '{ print $1 }' pkgs) \
+    && gcc --print-search-dir \
+    && echo 'int main() { return 0; }' > main.c \
+    && gcc -o main main.c \
+    && ./main \
+    && find /tmp -mindepth 1 -delete
 
 # Copy the native build artifacts from the previous stage
 COPY --from=native /native /native
@@ -49,13 +54,6 @@ COPY --from=native /native /native
 # Copy setup_native script and execute it
 COPY setup_native ./
 RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ print $1 }' pkgs)" ]
-
-# Test gcc and cleanup
-RUN gcc --print-search-dir \
-    && echo 'int main() { return 0; }' > main.c \
-    && gcc -o main main.c \
-    && ./main \
-    && find /tmp -mindepth 1 -delete
 
 # Copy the build scripts to /usr/local/bin
 COPY build_source build_indep build_archdep build /usr/local/bin/
