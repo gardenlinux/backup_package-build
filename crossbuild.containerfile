@@ -26,10 +26,14 @@ FROM $target_arch/$image
 WORKDIR /tmp
 COPY debian-src.sources local-pkgs.list /etc/apt/sources.list.d/
 COPY local-pkgs /etc/apt/preferences.d/
-RUN mkdir /pkgs && touch /pkgs/Packages
 COPY pkgs ./
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y build-essential ca-certificates debhelper devscripts git yq $(awk '{ print $1 }' pkgs)
-RUN apt-mark hold $(awk '{ print $1 }' pkgs)
+RUN mkdir /pkgs \
+    && touch /pkgs/Packages \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install \
+       --no-install-recommends -y build-essential ca-certificates debhelper \
+       devscripts git yq $(awk '{ print $1 }' pkgs) \
+    && apt-mark hold $(awk '{ print $1 }' pkgs)
 COPY --from=native /native /native
 COPY setup_native ./
 RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ print $1 }' pkgs)" ]
