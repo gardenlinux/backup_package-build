@@ -42,10 +42,7 @@ RUN gcc --print-search-dir \
     && gcc -o main main.c \
     && ./main \
     && find /tmp -mindepth 1 -delete
-COPY build_source /usr/local/bin/
-COPY build_indep /usr/local/bin/
-COPY build_archdep /usr/local/bin/
-COPY build /usr/local/bin/
+COPY build_source build_indep build_archdep build /usr/local/bin/
 COPY --from=mini_sudo /usr/local/bin/sudo /usr/local/bin/sudo
 RUN groupadd dev && useradd -m -g dev dev
 USER dev
