@@ -36,6 +36,7 @@ RUN apt-get update \
     && gcc -o main main.c \
     && ./main \
     && find /tmp -mindepth 1 -delete
+
 # Copy the build scripts to /usr/local/bin
 COPY build_source build_indep build_archdep build /usr/local/bin/
 
