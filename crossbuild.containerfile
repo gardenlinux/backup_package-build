@@ -37,12 +37,15 @@ RUN mkdir /pkgs \
 COPY --from=native /native /native
 COPY setup_native ./
 RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ print $1 }' pkgs)" ]
-RUN gcc --print-search-dir && echo 'int main() { return 0; }' > main.c && gcc -o main main.c && ./main
+RUN gcc --print-search-dir \
+    && echo 'int main() { return 0; }' > main.c \
+    && gcc -o main main.c \
+    && ./main \
+    && find /tmp -mindepth 1 -delete
 COPY build_source /usr/local/bin/
 COPY build_indep /usr/local/bin/
 COPY build_archdep /usr/local/bin/
 COPY build /usr/local/bin/
-RUN find /tmp -mindepth 1 -delete
 COPY --from=mini_sudo /usr/local/bin/sudo /usr/local/bin/sudo
 RUN groupadd dev && useradd -m -g dev dev
 USER dev
