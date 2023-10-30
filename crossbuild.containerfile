@@ -15,8 +15,12 @@ FROM $native_arch/$image AS native
 ARG gnu_arch=aarch64
 WORKDIR /tmp
 COPY pkgs setup_native ./
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y bbe patchelf $(sed 's/\$arch/'"$gnu_arch"'/' pkgs | awk '{ print $NF }')
-RUN ./setup_native export $(sed 's/\$arch/'"$gnu_arch"'/' pkgs | awk '{ print $NF }')
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install \
+       --no-install-recommends -y bbe patchelf \
+       $(sed 's/\$arch/'"$gnu_arch"'/' pkgs | awk '{ print $NF }') \
+    && ./setup_native export $(sed 's/\$arch/'"$gnu_arch"'/' pkgs \
+       | awk '{ print $NF }')
 
 FROM $target_arch/$image
 WORKDIR /tmp
