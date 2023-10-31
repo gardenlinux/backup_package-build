@@ -1,29 +1,49 @@
+# Use build arguments to specify the base image and architecture
 ARG image=debian:testing
 ARG arch=amd64
 
+# Stage 1: Build and install mini_sudo
 FROM $arch/$image AS mini_sudo
 WORKDIR /tmp
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y gcc libc-dev
 COPY mini_sudo.c ./
-RUN gcc -Wall -Werror -static -o sudo mini_sudo.c
-RUN install -m 6755 sudo /usr/local/bin/sudo
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install \
+       --no-install-recommends -y gcc libc-dev \
+    && gcc -Wall -Werror -static -o sudo mini_sudo.c \
+    && install -m 6755 sudo /usr/local/bin/sudo 
 
+# Stage 2: Final image
 FROM $arch/$image
 WORKDIR /tmp
-COPY debian-src.sources /etc/apt/sources.list.d/
-COPY local-pkgs.list /etc/apt/sources.list.d/
+
+# Copy repository configration files for apt 
+COPY debian-src.sources local-pkgs.list /etc/apt/sources.list.d/
 COPY local-pkgs /etc/apt/preferences.d/
+
+# Create a directory for local packages and touch the Packages file
 RUN mkdir /pkgs && touch /pkgs/Packages
+
+# Copy the package list file
 COPY pkgs ./
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y build-essential ca-certificates debhelper devscripts git sudo yq $(awk '{ print $1 }' pkgs)
-RUN apt-mark hold $(awk '{ print $1 }' pkgs)
-RUN gcc --print-search-dir && echo 'int main() { return 0; }' > main.c && gcc -o main main.c && ./main
-COPY build_source /usr/local/bin/
-COPY build_indep /usr/local/bin/
-COPY build_archdep /usr/local/bin/
-COPY build /usr/local/bin/
-RUN find /tmp -mindepth 1 -delete
+
+# Install packages from pkgs list and mark them as held, test gcc and cleanup
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install \
+       --no-install-recommends -y build-essential ca-certificates \
+       debhelper devscripts git sudo yq $(awk '{ print $1 }' pkgs) \
+    && apt-mark hold $(awk '{ print $1 }' pkgs) \
+    && gcc --print-search-dir && echo 'int main() { return 0; }' > main.c \
+    && gcc -o main main.c \
+    && ./main \
+    && find /tmp -mindepth 1 -delete
+
+# Copy the build scripts to /usr/local/bin
+COPY build_source build_indep build_archdep build /usr/local/bin/
+
+# Copy mini_sudo from stage 1
 COPY --from=mini_sudo /usr/local/bin/sudo /usr/local/bin/sudo
+
+# Create user dev and set the working directory for the user
 RUN groupadd dev && useradd -m -g dev dev
 USER dev
 RUN mkdir /home/dev/work
