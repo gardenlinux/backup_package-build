@@ -23,7 +23,7 @@ COPY conf/ /etc/
 RUN mkdir /pkgs && touch /pkgs/Packages
 
 # Copy the package list file
-COPY pkgs ./
+COPY container/conf/pkgs ./
 
 # Install packages from pkgs list and mark them as held, test gcc and cleanup
 RUN apt-get update \

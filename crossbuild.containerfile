@@ -17,7 +17,7 @@ RUN apt-get update \
 FROM $native_arch/$image AS native
 ARG gnu_arch=aarch64
 WORKDIR /tmp
-COPY pkgs setup_native ./
+COPY container/conf/ ./
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install \
        --no-install-recommends -y bbe patchelf \
@@ -32,8 +32,10 @@ WORKDIR /tmp
 # Copy repository configration files for apt
 COPY conf/ /etc/
 
+# Copy setup_native and pkgs into the container
+COPY container/conf/ ./
+
 # Install packages from pkgs list and mark them as held, test gcc
-COPY pkgs ./
 RUN mkdir /pkgs \
     && touch /pkgs/Packages \
     && apt-get update \
@@ -49,8 +51,6 @@ RUN mkdir /pkgs \
 # Copy the native build artifacts from the previous stage
 COPY --from=native /native /native
 
-# Copy setup_native script and execute it
-COPY setup_native ./
 RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ print $1 }' pkgs)" ]
 
 # Clean up /tmp
