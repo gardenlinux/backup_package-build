@@ -6,7 +6,7 @@ ARG target_arch=arm64v8
 # Stage 1: Build and install mini_sudo
 FROM $native_arch/$image AS mini_sudo
 WORKDIR /tmp
-COPY mini_sudo.c ./
+COPY misc/mini_sudo.c ./
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install \
        --no-install-recommends -y gcc libc-dev \
