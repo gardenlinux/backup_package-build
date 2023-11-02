@@ -36,8 +36,8 @@ RUN apt-get update \
     && ./main \
     && find /tmp -mindepth 1 -delete
 
-# Copy the build scripts to /usr/local/bin
-COPY build_source build_indep build_archdep build /usr/local/bin/
+# Copy the build scripts from bin/ into /usr/local/bin
+COPY bin/ /usr/local/bin
 
 # Copy mini_sudo from stage 1
 COPY --from=mini_sudo /usr/local/bin/sudo /usr/local/bin/sudo
