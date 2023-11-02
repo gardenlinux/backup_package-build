@@ -17,8 +17,7 @@ FROM $arch/$image
 WORKDIR /tmp
 
 # Copy repository configration files for apt 
-COPY debian-src.sources local-pkgs.list /etc/apt/sources.list.d/
-COPY local-pkgs /etc/apt/preferences.d/
+COPY conf/ /etc/
 
 # Create a directory for local packages and touch the Packages file
 RUN mkdir /pkgs && touch /pkgs/Packages

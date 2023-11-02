@@ -30,8 +30,7 @@ FROM $target_arch/$image
 WORKDIR /tmp
 
 # Copy repository configration files for apt
-COPY debian-src.sources local-pkgs.list /etc/apt/sources.list.d/
-COPY local-pkgs /etc/apt/preferences.d/
+COPY conf/ /etc/
 
 # Install packages from pkgs list and mark them as held, test gcc
 COPY pkgs ./
