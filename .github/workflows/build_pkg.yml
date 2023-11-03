@@ -59,6 +59,8 @@ jobs:
       - name: fetch dependencies
         run: |
           mkdir _pkgs
+          echo "fetch depends"
+          find # debug
           while IFS=@ read -r repo tag; do
             ./scripts/gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
               (cd _pkgs && wget "$url")
@@ -86,6 +88,8 @@ jobs:
       - name: check if ${{ env.pkg }} already released
         id: check
         run: |
+          echo eheck
+          find # debug
           if ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" exists "${{ steps.build.outputs.pkg }}"; then
             echo "skip_release=true" | tee "$GITHUB_OUTPUT"
           else
@@ -95,6 +99,8 @@ jobs:
         id: release
         if: ${{ steps.check.outputs.skip_release != 'true' }}
         run: |
+          echo release
+          find # debug
           release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${{ steps.build.outputs.pkg }}" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
           for f in output/*; do
             ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
@@ -135,6 +141,8 @@ jobs:
           ln -s "$pkg.dsc" .source
       - name: fetch dependencies
         run: |
+          echo "fetch depends"
+          find # debug
           mkdir _pkgs
           while IFS=@ read -r repo tag; do
             ./scripts/gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
@@ -164,6 +172,8 @@ jobs:
       - name: upload packages
         if: ${{ steps.build.outputs.pkg != '' }}
         run: |
+          echo upload
+          find # debug
           release="${{ needs.source.outputs.release }}"
           for f in output/*; do
             ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
