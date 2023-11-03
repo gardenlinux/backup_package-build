@@ -1,4 +1,4 @@
-name: build
+name: Build GardenLinux packages
 on:
   workflow_call:
     inputs:
@@ -14,6 +14,25 @@ on:
       dependencies:
         type: string
         default: ""
+      email:
+        type: string
+        default: "contact@gardenlinux.io"
+      name:
+        type: string
+        default: "Garden Linux Builder"
+      distribution:
+        type: string
+        default: "gardenlinux"
+      message:
+        type: string
+        default: "Rebuild for Garden Linux."
+
+env:
+  INPUT_EMAIL: ${{ inputs.email }}
+  INPUT_NAME: ${{ inputs.name }}
+  INPUT_DIST: ${{ inputs.distribution }}
+  INPUT_MESSAGE: ${{ inputs.message }}
+
 jobs:
   source:
     name: source package
