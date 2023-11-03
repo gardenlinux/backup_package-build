@@ -71,6 +71,10 @@ jobs:
         id: build
         run: |
           pkg="$(podman run \
+               -e EMAIL='${{ env.INPUT_EMAIL }}' \
+               -e NAME='${{ env.INPUT_NAME }}' \
+               -e DIST='${{ env.INPUT_DIST }}' \
+               -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                --rm \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
@@ -145,6 +149,10 @@ jobs:
         run: |
           mkdir output
           pkg="$(podman run \
+               -e EMAIL='${{ env.INPUT_EMAIL }}' \
+               -e NAME='${{ env.INPUT_NAME }}' \
+               -e DIST='${{ env.INPUT_DIST }}' \
+               -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                --rm \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
