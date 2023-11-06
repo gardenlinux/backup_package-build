@@ -30,7 +30,7 @@ FROM $target_arch/$image
 WORKDIR /tmp
 
 # Copy repository configration files for apt
-COPY conf/ /etc/
+COPY container/apt /etc/
 
 # Copy setup_native and pkgs into the container
 COPY container/conf/ ./
