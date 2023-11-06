@@ -38,7 +38,7 @@ jobs:
         run: |
           mkdir _pkgs
           while IFS=@ read -r repo tag; do
-            ./gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
+            ./scripts/gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
               (cd _pkgs && wget "$url")
             done
           done <<< '${{ inputs.dependencies }}'
@@ -54,7 +54,7 @@ jobs:
       - name: check if ${{ env.pkg }} already released
         id: check
         run: |
-          if ./gh_release "${{ github.token }}" "${{ github.repository }}" exists "${{ steps.build.outputs.pkg }}"; then
+          if ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" exists "${{ steps.build.outputs.pkg }}"; then
             echo "skip_release=true" | tee "$GITHUB_OUTPUT"
           else
             echo "skip_release=false" | tee "$GITHUB_OUTPUT"
@@ -63,9 +63,9 @@ jobs:
         id: release
         if: ${{ steps.check.outputs.skip_release != 'true' }}
         run: |
-          release="$(./gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${{ steps.build.outputs.pkg }}" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
+          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${{ steps.build.outputs.pkg }}" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
           for f in output/*; do
-            ./gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
+            ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
           done
           echo "release=$release" | tee "$GITHUB_OUTPUT"
   packages:
@@ -95,7 +95,7 @@ jobs:
           cd input
           pkg="${{ needs.source.outputs.pkg }}"
           release="${{ needs.source.outputs.release }}"
-          ../gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$pkg.dsc"
+          ../scripts/gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$pkg.dsc"
           awk '!/^ / { flag=0 } flag { print $NF } /^Files:/ { flag=1 }' < "$pkg.dsc" | while read -r file; do
             ../gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$file"
           done
@@ -105,7 +105,7 @@ jobs:
         run: |
           mkdir _pkgs
           while IFS=@ read -r repo tag; do
-            ./gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
+            ./scripts/gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
               (cd _pkgs && wget "$url")
             done
           done <<< '${{ inputs.dependencies }}'
@@ -123,7 +123,7 @@ jobs:
         run: |
           release="${{ needs.source.outputs.release }}"
           for f in output/*; do
-            ./gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
+            ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
           done
   publish:
     needs: [ source, packages ]
@@ -134,7 +134,7 @@ jobs:
         with:
           repository: gardenlinux/package-build
       - name: publish drafted release
-        run: ./gh_release "${{ github.token }}" "${{ github.repository }}" publish_draft "${{ needs.source.outputs.release }}"
+        run: ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" publish_draft "${{ needs.source.outputs.release }}"
   cleanup:
     needs: [ source, packages ]
     if: ${{ always() && contains(needs.*.result, 'failure') }}
@@ -144,4 +144,4 @@ jobs:
         with:
           repository: gardenlinux/package-build
       - name: delete drafted release
-        run: ./gh_release "${{ github.token }}" "${{ github.repository }}" delete "${{ needs.source.outputs.release }}"
+        run: ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" delete "${{ needs.source.outputs.release }}"
