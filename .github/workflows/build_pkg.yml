@@ -26,12 +26,15 @@ on:
       message:
         type: string
         default: "Rebuild for Garden Linux."
+      build_options:
+        type: string
 
 env:
   INPUT_EMAIL: ${{ inputs.email }}
   INPUT_NAME: ${{ inputs.name }}
   INPUT_DIST: ${{ inputs.distribution }}
   INPUT_MESSAGE: ${{ inputs.message }}
+  INPUT_BUILD_OPTIONS: ${{ inputs.build_options }}
 
 jobs:
   source:
