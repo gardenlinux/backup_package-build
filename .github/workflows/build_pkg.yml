@@ -36,6 +36,9 @@ on:
         default: ""
       source_version:
         type: string
+      version_suffix:
+        type: string
+        default: "gl0"
 
 env:
   INPUT_EMAIL: ${{ inputs.email }}
@@ -46,6 +49,7 @@ env:
   INPUT_SOURCE_NAME: ${{ inputs.source_name }}
   INPUT_DEBIAN_SOURCE: ${{ inputs.debian_source }}
   INPUT_SOURCE_VERSION: ${{ inputs.source_version }}
+  INPUT_VERSION_SUFFIX: ${{ inputs.version_suffix }}
 
 jobs:
   source:
@@ -90,6 +94,7 @@ jobs:
                -e SOURCE_NAME='${{ env.INPUT_SOURCE_NAME }}' \
                -e DEBIAN_SOURCE='${{ env.INPUT_DEBIAN_SOURCE }}' \
                -e SOURCE_VERSION='${{ env.INPUT_SOURCE_VERSION }}' \
+               -e VERSION_SUFFIX='${{ env.INPUT_VERSION_SUFFIX }}' \
                --rm \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
@@ -172,6 +177,7 @@ jobs:
                -e SOURCE_NAME='${{ env.INPUT_SOURCE_NAME }}' \
                -e DEBIAN_SOURCE='${{ env.INPUT_DEBIAN_SOURCE }}' \
                -e SOURCE_VERSION='${{ env.INPUT_SOURCE_VERSION }}' \
+               -e VERSION_SUFFIX='${{ env.INPUT_VERSION_SUFFIX }}' \
                --rm \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
