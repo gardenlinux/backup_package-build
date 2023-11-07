@@ -17,7 +17,7 @@ FROM $arch/$image
 WORKDIR /tmp
 
 # Copy repository configration files for apt 
-COPY container/apt /etc/
+COPY container/apt/ /etc/apt/
 
 # Create a directory for local packages and touch the Packages file
 RUN mkdir /pkgs && touch /pkgs/Packages
