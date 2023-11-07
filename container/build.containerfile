@@ -26,7 +26,7 @@ RUN mkdir /pkgs && touch /pkgs/Packages
 COPY container/conf/pkgs ./
 
 # Install packages from pkgs list and mark them as held, test gcc and cleanup
-RUN apt-get update \
+RUN find /etc/apt/ && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install \
        --no-install-recommends -y build-essential ca-certificates \
        debhelper devscripts git sudo yq $(awk '{ print $1 }' pkgs) \

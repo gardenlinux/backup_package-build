@@ -36,7 +36,7 @@ COPY container/apt/ /etc/apt/
 COPY container/conf/ ./
 
 # Install packages from pkgs list and mark them as held, test gcc
-RUN mkdir /pkgs \
+RUN find /etc/apt/ && mkdir /pkgs \
     && touch /pkgs/Packages \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install \
