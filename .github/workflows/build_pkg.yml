@@ -28,6 +28,9 @@ on:
         default: "Rebuild for Garden Linux."
       build_options:
         type: string
+      source_name:
+        type: string
+        default: "${{ github.event.repository.name }}"
 
 env:
   INPUT_EMAIL: ${{ inputs.email }}
@@ -35,6 +38,7 @@ env:
   INPUT_DIST: ${{ inputs.distribution }}
   INPUT_MESSAGE: ${{ inputs.message }}
   INPUT_BUILD_OPTIONS: ${{ inputs.build_options }}
+  INPUT_SOURCE_NAME: ${{ inputs.source_name }}
 
 jobs:
   source:
@@ -76,6 +80,7 @@ jobs:
                -e DIST='${{ env.INPUT_DIST }}' \
                -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                -e BUILD_OPTIONS='${{ env.INPUT_BUILD_OPTIONS }}' \
+               -e SOURCE_NAME='${{ env.INPUT_SOURCE_NAME }}' \
                --rm \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
@@ -155,6 +160,7 @@ jobs:
                -e DIST='${{ env.INPUT_DIST }}' \
                -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                -e BUILD_OPTIONS='${{ env.INPUT_BUILD_OPTIONS }}' \
+               -e SOURCE_NAME='${{ env.INPUT_SOURCE_NAME }}' \
                --rm \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
