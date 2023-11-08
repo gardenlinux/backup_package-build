@@ -107,13 +107,9 @@ apply_patches() (
 
 	version="$SOURCE_VERSION"
 	[ -n "$version" ] || version="$(dpkg-parsechangelog --show-field Version)"
-	email="$EMAIL"
-	name="$NAME"
-	distribution="$DIST"
 	version_suffix="$VERSION_SUFFIX"
-	message="$MESSAGE"
 
-	DEBEMAIL="$email" DEBFULLNAME="$name" dch --newversion "$version$version_suffix" --distribution "$distribution" --force-distribution -- "$message"
+	DEBEMAIL="$EMAIL" DEBFULLNAME="$NAME" dch --newversion "$version$version_suffix" --distribution "$DIST" --force-distribution -- "$MESSAGE"
 
 	if [ -x "$1/exec.post" ]; then
 		SOURCE="$source" "$1/exec.post"
