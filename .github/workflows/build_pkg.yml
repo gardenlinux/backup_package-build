@@ -14,10 +14,10 @@ on:
       dependencies:
         type: string
         default: ""
-      email:
+      debemail:
         type: string
         default: "contact@gardenlinux.io"
-      name:
+      debfullname:
         type: string
         default: "Garden Linux Builder"
       distribution:
@@ -41,8 +41,8 @@ on:
         default: "gl0"
 
 env:
-  INPUT_EMAIL: ${{ inputs.email }}
-  INPUT_NAME: ${{ inputs.name }}
+  INPUT_DEBEMAIL: ${{ inputs.debemail }}
+  INPUT_DEBFULLNAME: ${{ inputs.debfullname }}
   INPUT_DIST: ${{ inputs.distribution }}
   INPUT_MESSAGE: ${{ inputs.message }}
   INPUT_BUILD_OPTIONS: ${{ inputs.build_options }}
@@ -86,8 +86,8 @@ jobs:
         id: build
         run: |
           pkg="$(podman run \
-               -e EMAIL='${{ env.INPUT_EMAIL }}' \
-               -e NAME='${{ env.INPUT_NAME }}' \
+               -e DEBEMAIL='${{ env.INPUT_DEBEMAIL }}' \
+               -e DEBFULLNAME='${{ env.INPUT_DEBFULLNAME }}' \
                -e DIST='${{ env.INPUT_DIST }}' \
                -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                -e BUILD_OPTIONS='${{ env.INPUT_BUILD_OPTIONS }}' \
@@ -169,8 +169,8 @@ jobs:
         run: |
           mkdir output
           pkg="$(podman run \
-               -e EMAIL='${{ env.INPUT_EMAIL }}' \
-               -e NAME='${{ env.INPUT_NAME }}' \
+               -e DEBEMAIL='${{ env.INPUT_DEBEMAIL }}' \
+               -e DEBFULLNAME='${{ env.INPUT_DEBFULLNAME }}' \
                -e DIST='${{ env.INPUT_DIST }}' \
                -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                -e BUILD_OPTIONS='${{ env.INPUT_BUILD_OPTIONS }}' \
