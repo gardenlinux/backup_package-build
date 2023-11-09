@@ -50,6 +50,7 @@ jobs:
         run: |
           pkg="$(podman run \
                --rm \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/sbin,ro" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
@@ -124,6 +125,7 @@ jobs:
           mkdir output
           pkg="$(podman run \
                --rm \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/,dst=/usr/local/sbin,ro" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
