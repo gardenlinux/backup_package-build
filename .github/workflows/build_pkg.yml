@@ -30,7 +30,7 @@ on:
         type: string
       source_name:
         type: string
-        default: "${{ github.event.repository.name }}"
+        default: "${{ github.workflow }}"
       debian_source:
         type: string
         default: ""
@@ -97,7 +97,7 @@ jobs:
                -e SOURCE_VERSION='${{ env.INPUT_SOURCE_VERSION }}' \
                -e VERSION_SUFFIX='${{ env.INPUT_VERSION_SUFFIX }}' \
                --rm \
-               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/bin,ro" \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/sbin,ro" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
@@ -177,7 +177,7 @@ jobs:
                -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                -e BUILD_OPTIONS='${{ env.INPUT_BUILD_OPTIONS }}' \
                --rm \
-               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/,dst=/usr/local/bin,ro" \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/,dst=/usr/local/sbin,ro" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
