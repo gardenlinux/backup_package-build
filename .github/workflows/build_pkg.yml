@@ -48,7 +48,7 @@ jobs:
       - name: build
         id: build
         run: |
-          pkg="$(podman run --rm -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:amd64" build_source)"
+          pkg="$(podman run --rm ${GITHUB_ACTION_PATH}/container/bin:/usr/local/bin -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:amd64" build_source)"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
           echo "build_options=$(cat output/.build_options)" | tee -a "$GITHUB_OUTPUT"
       - name: check if ${{ env.pkg }} already released
@@ -116,7 +116,7 @@ jobs:
         id: build
         run: |
           mkdir output
-          pkg="$(podman run --rm -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:${{ matrix.arch }}" "build_${{ matrix.target }}")"
+          pkg="$(podman run --rm -v ${GITHUB_ACTION_PATH}/container/bin:/usr/local/bin -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:${{ matrix.arch }}" "build_${{ matrix.target }}")"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
       - name: upload packages
         if: ${{ steps.build.outputs.pkg != '' }}
