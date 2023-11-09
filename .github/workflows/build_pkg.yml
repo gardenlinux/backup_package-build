@@ -96,6 +96,7 @@ jobs:
                -e SOURCE_VERSION='${{ env.INPUT_SOURCE_VERSION }}' \
                -e VERSION_SUFFIX='${{ env.INPUT_VERSION_SUFFIX }}' \
                --rm \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/bin,ro" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
@@ -179,6 +180,7 @@ jobs:
                -e SOURCE_VERSION='${{ env.INPUT_SOURCE_VERSION }}' \
                -e VERSION_SUFFIX='${{ env.INPUT_VERSION_SUFFIX }}' \
                --rm \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/,dst=/usr/local/bin,ro" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
