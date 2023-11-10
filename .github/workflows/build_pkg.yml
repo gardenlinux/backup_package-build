@@ -31,9 +31,6 @@ on:
       source_name:
         type: string
         default: "${{ github.workflow }}"
-      debian_source:
-        type: string
-        default: ""
       source_version:
         type: string
       version_suffix:
@@ -47,7 +44,6 @@ env:
   INPUT_MESSAGE: ${{ inputs.message }}
   INPUT_BUILD_OPTIONS: ${{ inputs.build_options }}
   INPUT_SOURCE_NAME: ${{ inputs.source_name }}
-  INPUT_DEBIAN_SOURCE: ${{ inputs.debian_source }}
   INPUT_SOURCE_VERSION: ${{ inputs.source_version }}
   INPUT_VERSION_SUFFIX: ${{ inputs.version_suffix }}
 
@@ -93,7 +89,6 @@ jobs:
                -e MESSAGE='${{ env.INPUT_MESSAGE }}' \
                -e BUILD_OPTIONS='${{ env.INPUT_BUILD_OPTIONS }}' \
                -e SOURCE_NAME='${{ env.INPUT_SOURCE_NAME }}' \
-               -e DEBIAN_SOURCE='${{ env.INPUT_DEBIAN_SOURCE }}' \
                -e SOURCE_VERSION='${{ env.INPUT_SOURCE_VERSION }}' \
                -e VERSION_SUFFIX='${{ env.INPUT_VERSION_SUFFIX }}' \
                --rm \

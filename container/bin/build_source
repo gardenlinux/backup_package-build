@@ -10,27 +10,11 @@ main() (
 	export DEB_BUILD_OPTIONS
 
 	source="$SOURCE_NAME"
-	debian_source="$DEBIAN_SOURCE"
 
 	if [[ "$source" = "git+"* ]]; then
 		git_source "${source#git+}"
 	else
 		apt_source "$source"
-	fi
-
-	# if debian_source defined: remove debian folder from source and replace with debian folder from debian_source
-	if [ -n "$debian_source" ]; then
-		mkdir debian_src
-		cd debian_src
-		if [[ "$debian_source" = "git+"* ]]; then
-			git_source "${debian_source#git+}"
-		else
-			apt_source "$debian_source"
-		fi
-		rm -rf ../src/debian
-		mv src/debian ../src/
-		cd ..
-		rm -rf debian_src
 	fi
 
 	cd src
@@ -69,12 +53,22 @@ apt_source() (
 	mkdir src
 	tar -C src -x --strip-components 1 < orig.tar
 	auto_decompress "$debian" | tar -C src -xv
+        if [ -d /input/debian ]; then
+          echo "### Replace debian folder with own content"
+	  sudo apt install rsync -yy
+          rsync -a /input/debian src/
+	fi
 	rm "$orig" "$debian" "$dsc"
 )
 
 git_source() (
 	IFS='#' read -r url ref <<< "$1"
 	git clone --bare --branch "$ref" --depth 1 "$url" src.git
+	if [ -d /input/debian ]; then
+	  echo "### Replace debian folder with own content"
+	  sudo apt install rsync -yy
+	  rsync -a /input/debian src/
+	fi
 	GIT_DIR=src.git git archive --prefix src/ "$ref" > orig.tar
 	rm -rf src.git
 	tar -x < orig.tar
