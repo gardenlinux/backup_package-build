@@ -104,7 +104,7 @@ jobs:
           release="${{ needs.source.outputs.release }}"
           ../scripts/gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$pkg.dsc"
           awk '!/^ / { flag=0 } flag { print $NF } /^Files:/ { flag=1 }' < "$pkg.dsc" | while read -r file; do
-            ../gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$file"
+            ../scripts/gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$file"
           done
           echo "${{ needs.source.outputs.build_options }}" > .build_options
           ln -s "$pkg.dsc" .source
