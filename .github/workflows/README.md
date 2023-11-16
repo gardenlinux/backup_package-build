@@ -69,13 +69,13 @@ To use the `build_pkg.yml` workflow defined in this repository, follow these ste
    on: push
    jobs:
      htop:
-       uses: gardenlinux/package-build/.github/workflows/build_pkg.yaml@branchname
+       uses: gardenlinux/package-build/.github/workflows/build_pkg.yml@branchname
 ```
 Replace `project` to other package name of your package-project. Replace `branchname` with the specific branch or tag of the build_pkg.yaml workflow you want to use. The default is `main` branch.
 
 3. Call the gardenlinux/package-build/.github/workflows/build_pkg.yml@branchname workflow with the specific input parameters under `with:` specific to your project. such as `debemail`, `debfullname`, `distribution`, `message` and others mentioned in the Workflow Configuration section. The default values will be use if wihout provide any input parameters.
 ```
-       uses: gardenlinux/package-build/.github/workflows/build_pkg.yaml@branchname
+       uses: gardenlinux/package-build/.github/workflows/build_pkg.yml@branchname
        with:
          debemail: your@address
          debfullname: "Your Name"
