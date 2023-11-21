@@ -7,7 +7,7 @@ It contains:
 - `container/`: This folder contains container-related files that define images and configurations.
   - `*.containerfile`: These files define container images.
   - `apt/`: This folder contains apt configuration files.
-  - `bin/`: This folder contains executable scripts installs into the container.
+  - `bin/`: This folder contains executable scripts that bind mount into the container.
   - `conf/`: This folder contains containers configurations on installed packages list and native container setup.
 - `misc/`: This folder contains miscellaneous files related to the project.
 - `scripts/`: This folder contains scripts for it's github actions workflow.
