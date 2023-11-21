@@ -16,5 +16,6 @@ lz4
 lzip
 lzop
 make
+rsync
 tar
 xz-utils
