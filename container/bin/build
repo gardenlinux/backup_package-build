@@ -5,7 +5,7 @@ set -exuo pipefail
 exec 3>&1
 exec 1>&2
 
-pkg="$(build_source "$@")"
-
-build_indep "$pkg.dsc"
-build_archdep "$pkg.dsc"
+[ -d /output ] || sudo mkdir /output
+build_source "$@"
+build_indep /output
+build_archdep /output

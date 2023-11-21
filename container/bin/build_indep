@@ -6,10 +6,11 @@ exec 3>&1
 exec 1>&2
 
 main() (
-	DEB_BUILD_OPTIONS="$(cat /input/.build_options)"
+	input_dir="${1:-/input}"
+	DEB_BUILD_OPTIONS="$(cat "$input_dir/.build_options")"
 	export DEB_BUILD_OPTIONS
 
-	dsc="$(realpath "/input/.source")"
+	dsc="$(realpath "$input_dir/.source")"
 	dsc_arch="$(grep -oP '(?<=^Architecture: ).*' < "$dsc" | tr ' ' '\n')"
 
 	grep -P '^(linux-)?all$' <<< "$dsc_arch" || exit 0
