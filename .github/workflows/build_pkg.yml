@@ -48,7 +48,14 @@ jobs:
       - name: build
         id: build
         run: |
-          pkg="$(podman run --rm -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:amd64" build_source)"
+          pkg="$(podman run \
+               --rm \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/sbin,ro" \
+               -v "$PWD/input:/input" \
+               -v "$PWD/output:/output" \
+               -v "$PWD/_pkgs:/pkgs" \
+               "${{ inputs.build_container }}:amd64" build_source
+          )"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
           echo "build_options=$(cat output/.build_options)" | tee -a "$GITHUB_OUTPUT"
       - name: check if ${{ env.pkg }} already released
@@ -97,7 +104,7 @@ jobs:
           release="${{ needs.source.outputs.release }}"
           ../scripts/gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$pkg.dsc"
           awk '!/^ / { flag=0 } flag { print $NF } /^Files:/ { flag=1 }' < "$pkg.dsc" | while read -r file; do
-            ../gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$file"
+            ../scripts/gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$file"
           done
           echo "${{ needs.source.outputs.build_options }}" > .build_options
           ln -s "$pkg.dsc" .source
@@ -116,7 +123,15 @@ jobs:
         id: build
         run: |
           mkdir output
-          pkg="$(podman run --rm -v "$PWD/input:/input" -v "$PWD/output:/output" -v "$PWD/_pkgs:/pkgs" "${{ inputs.build_container }}:${{ matrix.arch }}" "build_${{ matrix.target }}")"
+          pkg="$(podman run \
+               --rm \
+               --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/sbin,ro" \
+               -v "$PWD/input:/input" \
+               -v "$PWD/output:/output" \
+               -v "$PWD/_pkgs:/pkgs" \
+               "${{ inputs.build_container }}:${{ matrix.arch }}" \
+               "build_${{ matrix.target }}"
+          )"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
       - name: upload packages
         if: ${{ steps.build.outputs.pkg != '' }}
