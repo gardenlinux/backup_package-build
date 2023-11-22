@@ -14,6 +14,8 @@ main() (
 
 	if [[ "$source" = "git+"* ]]; then
 		git_source "${source#git+}"
+	elif [[ "$source" = "native" ]]; then
+		native_source
 	else
 		apt_source "$source"
 	fi
@@ -86,6 +88,11 @@ git_source() (
 	GIT_DIR=src.git git archive --prefix src/ "$ref" > orig.tar
 	rm -rf src.git
 	tar -x < orig.tar
+)
+
+native_source() (
+	echo "Native package build."
+	cp -r /input src
 )
 
 auto_decompress() (
