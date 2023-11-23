@@ -47,10 +47,16 @@ jobs:
           cat _pkgs/Packages
       - name: build
         id: build
+        env:
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
+          version=""
+          [ "$GITHUB_REF_TYPE" == "tag" ] && version=${GITHUB_REF_NAME#*/}
           pkg="$(podman run \
                --rm \
                --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/sbin,ro" \
+               -e PACKAGE_VERSION="$version" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
