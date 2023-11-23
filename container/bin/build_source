@@ -5,6 +5,13 @@ set -exuo pipefail
 exec 3>&1
 exec 1>&2
 
+# Default variables for build packages
+email="contact@gardenlinux.io"
+maintainer="Garden Linux Builder"
+distribution=gardenlinux
+message="Rebuild for Garden Linux."
+inputs_file="/input/.github/workflows/build.yml"
+
 main() (
 	DEB_BUILD_OPTIONS="terse $(yq -r '.build_options // ""' < "/input/pkg.yaml")"
 	export DEB_BUILD_OPTIONS
@@ -105,15 +112,16 @@ apply_patches() (
 		done < "$1/patches/series"
 	fi
 
+	name="$(yq -r '.name' < "$inputs_file")"
 	version="$(yq -r '.version // ""' < "$1/pkg.yaml")"
 	[ -n "$version" ] || version="$(dpkg-parsechangelog --show-field Version)"
-	email="$(yq -r '.email // ""' < "$1/pkg.yaml")"
-	name="$(yq -r '.name // ""' < "$1/pkg.yaml")"
-	distribution="$(yq -r '.distribution // ""' < "$1/pkg.yaml")"
+	email="$(yq -r --arg name "$name" '.jobs[$name].with.email // "'"$email"'"' < "$inputs_file")"
+	maintainer="$(yq -r --arg name "$name" '.jobs[$name].with.maintainer // "'"$maintainer"'"' < "$inputs_file")"
+	distribution="$(yq -r --arg name "$name" '.jobs[$name].with.distribution // "'"$distribution"'"' < "$inputs_file")"
 	version_suffix="$(yq -r '.version_suffix // ""' < "$1/pkg.yaml")"
-	message="$(yq -r '.message // ""' < "$1/pkg.yaml")"
+	message="$(yq -r --arg name "$name" '.jobs[$name].with.message // "'"$message"'"' < "$inputs_file")"
 
-	DEBEMAIL="$email" DEBFULLNAME="$name" dch --newversion "$version$version_suffix" --distribution "$distribution" --force-distribution -- "$message"
+	DEBEMAIL="$email" DEBFULLNAME="$maintainer" dch --newversion "$version$version_suffix" --distribution "$distribution" --force-distribution -- "$message"
 
 	if [ -x "$1/exec.post" ]; then
 		SOURCE="$source" "$1/exec.post"
