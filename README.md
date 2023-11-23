@@ -20,10 +20,7 @@ By following these steps, you will be able to build the container image for your
 
 To build the container, follow the steps below:
 
-Install the `podman` package:
-```
-apt install podman
-```
+Install `podman` on your system: https://podman.io/docs/installation
 
 Update unqualified search in `/etc/containers/registries.conf`:
 
