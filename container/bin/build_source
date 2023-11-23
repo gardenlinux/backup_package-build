@@ -21,6 +21,8 @@ main() (
 
 	if [[ "$source" = "git+"* ]]; then
 		git_source "${source#git+}"
+	elif [[ "$source" = "native" ]]; then
+		native_source
 	else
 		apt_source "$source"
 	fi
@@ -46,8 +48,10 @@ main() (
 	pkg="$(dpkg-parsechangelog --show-field Source)"
 	version="$(dpkg-parsechangelog --show-field Version)"
 	version_orig="${version%-*}"
-	xz < ../orig.tar > "../${pkg}_${version_orig}.orig.tar.xz"
-	rm ../orig.tar
+	if [ -f ../orig.tar ]; then
+		xz < ../orig.tar > "../${pkg}_${version_orig}.orig.tar.xz"
+		rm ../orig.tar
+	fi
 	
 	dpkg-source --build .
 
@@ -72,11 +76,17 @@ apt_source() (
 	orig=(*.orig.tar.*)
 	debian=(*.debian.tar.*)
 	dsc=(*.dsc)
-	auto_decompress "$orig" > orig.tar
-	mkdir src
-	tar -C src -x --strip-components 1 < orig.tar
-	auto_decompress "$debian" | tar -C src -xv
-	rm "$orig" "$debian" "$dsc"
+	dpkg-source --extract "$dsc" src
+	if [ -f "$orig" ]; then
+		auto_decompress "$orig" > orig.tar
+		rm $orig
+	else
+		rm *.tar.*
+	fi
+	if [ -f $debian ]; then
+		rm "$debian"
+	fi
+	rm "$dsc"
 )
 
 git_source() (
@@ -85,6 +95,11 @@ git_source() (
 	GIT_DIR=src.git git archive --prefix src/ "$ref" > orig.tar
 	rm -rf src.git
 	tar -x < orig.tar
+)
+
+native_source() (
+	echo "Native package build."
+	cp -r /input src
 )
 
 auto_decompress() (
