@@ -14,6 +14,18 @@ on:
       dependencies:
         type: string
         default: ""
+      email:
+        type: string
+        default: ""
+      maintainer:
+        type: string
+        default: ""
+      distribution:
+        type: string
+        default: ""
+      message:
+        type: string
+        default: ""
 jobs:
   source:
     name: source package
