@@ -61,11 +61,12 @@ main() (
 
 	# Add some meta files next to the created artifacts
 	echo "$DEB_BUILD_OPTIONS" > .build_options
+	echo "${pkg}" > .source_name
 	ln -s "${pkg}_${version}.dsc" .source
 
 	# Copy all artifacts to the dedicated output directory
 	if [ -d "/output" ]; then
-		{ echo .build_options; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
+		{ echo .build_options; echo .source_name; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
 			sudo cp -d "$file" "/output/$file"
 		done
 	fi

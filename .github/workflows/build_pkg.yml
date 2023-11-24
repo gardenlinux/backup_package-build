@@ -38,6 +38,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gardenlinux/package-build
+          ref: feature/5-remove-pkg-yml
       - run: mkdir input output
       - uses: actions/checkout@v4
         with:
@@ -76,6 +77,7 @@ jobs:
           )"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
           echo "build_options=$(cat output/.build_options)" | tee -a "$GITHUB_OUTPUT"
+          echo "source_name=$(cat output/.source_name)" | tee -a "$GITHUB_OUTPUT"
       - name: check if ${{ env.pkg }} already released
         id: check
         run: |
@@ -88,11 +90,10 @@ jobs:
         id: release
         if: ${{ steps.check.outputs.skip_release != 'true' }}
         env:
-          ARTIFACT_NAME: ${{ steps.build.outputs.pkg }}
-          ARTIFACT_COMMIT: ${{ github.sha }}
+          PKG_NAME: ${{ steps.build.outputs.pkg }}
         run: |
-          ARTIFACT_TAG=${ARTIFACT_NAME/\~/\_}
-          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${ARTIFACT_TAG}" "${ARTIFACT_COMMIT}" "${ARTIFACT_NAME}")"
+          tag="gardenlinux/${PKG_NAME#${{ steps.build.outputs.source_name }}_}"
+          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "$tag" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
           for f in output/*; do
             ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
           done
@@ -113,6 +114,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gardenlinux/package-build
+          ref: feature/5-remove-pkg-yml
       - name: setup binfmt
         if: ${{ matrix.arch == 'arm64v8' }}
         run: sudo podman run --privileged ghcr.io/gardenlinux/binfmt_container
@@ -170,6 +172,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gardenlinux/package-build
+          ref: feature/5-remove-pkg-yml
       - name: publish drafted release
         run: ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" publish_draft "${{ needs.source.outputs.release }}"
   cleanup:
