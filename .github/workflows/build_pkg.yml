@@ -75,8 +75,12 @@ jobs:
       - name: draft release and upload source packages
         id: release
         if: ${{ steps.check.outputs.skip_release != 'true' }}
+        env:
+          ARTIFACT_NAME: ${{ steps.build.outputs.pkg }}
+          ARTIFACT_COMMIT: ${{ github.sha }}
         run: |
-          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${{ steps.build.outputs.pkg }}" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
+          ARTIFACT_TAG=${ARTIFACT_NAME/\~/\_}
+          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${ARTIFACT_TAG}" "${ARTIFACT_COMMIT}" "${ARTIFACT_NAME}")"
           for f in output/*; do
             ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
           done
