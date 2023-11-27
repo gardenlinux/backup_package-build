@@ -17,7 +17,7 @@ main() (
 	# Init some variables
 	name="$(yq -r '.name' < "$inputs_file")"
 	source="$(yq -r --arg name "$name" '.jobs[$name].with.source // "'$name'"' < "$inputs_file")"
-	debian_source="$(yq -r --arg name "$name" '.jobs[$name].with.debian_src // "'$debian_source'"' < "$inputs_file")"
+	debian_source="$(yq -r --arg name "$name" '.jobs[$name].with.debian_source // "'$debian_source'"' < "$inputs_file")"
 	build_options="terse $(yq -r --arg name "$name" '.jobs[$name].with.build_options // ""' < "$inputs_file")"
 
 	# Define Build Options
