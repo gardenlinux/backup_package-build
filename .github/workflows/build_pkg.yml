@@ -11,6 +11,12 @@ on:
       build_container:
         type: string
         default: ghcr.io/gardenlinux/package-build
+      source:
+        type: string
+        default: ""
+      debian_source:
+        type: string
+        default: ""
       dependencies:
         type: string
         default: ""
