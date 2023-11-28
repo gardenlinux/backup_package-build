@@ -16,9 +16,9 @@ inputs_file="/input/.github/workflows/build.yml"
 main() (
 	# Init some variables
 	name="$(yq -r '.name' < "$inputs_file")"
-	source="$(yq -r --arg name "$name" '.jobs[$name].with.source // "'$name'"' < "$inputs_file")"
-	debian_source="$(yq -r --arg name "$name" '.jobs[$name].with.debian_source // "'$debian_source'"' < "$inputs_file")"
-	build_options="terse $(yq -r --arg name "$name" '.jobs[$name].with.build_options // ""' < "$inputs_file")"
+	source="$(yq -r '.jobs.build_pkg.with.source // "'$name'"' < "$inputs_file")"
+	debian_source="$(yq -r '.jobs.build_pkg.with.debian_source // "'$debian_source'"' < "$inputs_file")"
+	build_options="terse $(yq -r '.jobs.build_pkg.with.build_options // ""' < "$inputs_file")"
 
 	# Define Build Options
 	export DEB_BUILD_OPTIONS="$build_options"
@@ -132,10 +132,10 @@ apply_patches() (
 	fi
 
 	name="$(yq -r '.name' < "$inputs_file")"
-	email="$(yq -r --arg name "$name" '.jobs[$name].with.email // "'"$email"'"' < "$inputs_file")"
-	maintainer="$(yq -r --arg name "$name" '.jobs[$name].with.maintainer // "'"$maintainer"'"' < "$inputs_file")"
-	distribution="$(yq -r --arg name "$name" '.jobs[$name].with.distribution // "'"$distribution"'"' < "$inputs_file")"
-	message="$(yq -r --arg name "$name" '.jobs[$name].with.message // "'"$message"'"' < "$inputs_file")"
+	email="$(yq -r '.jobs.build_pkg.with.email // "'"$email"'"' < "$inputs_file")"
+	maintainer="$(yq -r '.jobs.build_pkg.with.maintainer // "'"$maintainer"'"' < "$inputs_file")"
+	distribution="$(yq -r '.jobs.build_pkg.with.distribution // "'"$distribution"'"' < "$inputs_file")"
+	message="$(yq -r '.jobs.build_pkg.with.message // "'"$message"'"' < "$inputs_file")"
 
 	DEBEMAIL="$email" DEBFULLNAME="$maintainer" dch --newversion "$(get_version)" --distribution "$distribution" --force-distribution -- "$message"
 
