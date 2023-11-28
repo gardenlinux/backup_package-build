@@ -37,10 +37,11 @@ jobs:
     name: source package
     outputs:
       pkg: ${{ steps.build.outputs.pkg }}
+      source_name: ${{ steps.build.outputs.source_name }}
+      source_version: ${{ steps.build.outputs.source_version }}
       build_options: ${{ steps.build.outputs.build_options }}
       release: ${{ steps.release.outputs.release }}
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +52,8 @@ jobs:
           repository: ${{ inputs.repository }}
           ref: ${{ inputs.ref }}
           path: input
+          fetch-tags: true
+          fetch-depth: 0
       - name: pull build container
         run: podman pull "${{ inputs.build_container }}:amd64"
       - name: fetch dependencies
@@ -84,30 +87,18 @@ jobs:
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
           echo "build_options=$(cat output/.build_options)" | tee -a "$GITHUB_OUTPUT"
           echo "source_name=$(cat output/.source_name)" | tee -a "$GITHUB_OUTPUT"
-      - name: check if ${{ env.pkg }} already released
-        id: check
-        run: |
-          if ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" exists "${{ steps.build.outputs.pkg }}"; then
-            echo "skip_release=true" | tee "$GITHUB_OUTPUT"
-          else
-            echo "skip_release=false" | tee "$GITHUB_OUTPUT"
-          fi
-      - name: draft release and upload source packages
-        id: release
-        if: ${{ steps.check.outputs.skip_release != 'true' }}
-        env:
-          PKG_NAME: ${{ steps.build.outputs.pkg }}
-        run: |
-          tag="gardenlinux/${PKG_NAME#${{ steps.build.outputs.source_name }}_}"
-          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "$tag" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
-          for f in output/*; do
-            ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
-          done
-          echo "release=$release" | tee "$GITHUB_OUTPUT"
+          echo "source_version=$(cat output/.source_version)" | tee -a "$GITHUB_OUTPUT"
+      - name: upload source packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: source
+          path: |
+            output/
+            !output/.*
+          retention-days: 7
   packages:
     name: ${{ matrix.target == 'indep' && 'architecture independent packages' || format('{0} binary packages', matrix.arch) }}
     needs: source
-    if: ${{ needs.source.outputs.release != '' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -125,18 +116,16 @@ jobs:
         run: sudo podman run --privileged ghcr.io/gardenlinux/binfmt_container
       - name: pull build container
         run: podman pull "${{ inputs.build_container }}:${{ matrix.arch }}"
-      - name: get source package
+      - name: get source packages
+        uses: actions/download-artifact@v3
+        with:
+          name: source
+          path: input/
+      - name: prepare source package for build
         run: |
-          mkdir input
-          cd input
-          pkg="${{ needs.source.outputs.pkg }}"
-          release="${{ needs.source.outputs.release }}"
-          ../scripts/gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$pkg.dsc"
-          awk '!/^ / { flag=0 } flag { print $NF } /^Files:/ { flag=1 }' < "$pkg.dsc" | while read -r file; do
-            ../scripts/gh_release "${{ github.token }}" "${{ github.repository }}" download "$release" "$file"
-          done
+          cd input/
           echo "${{ needs.source.outputs.build_options }}" > .build_options
-          ln -s "$pkg.dsc" .source
+          ln -s "${{ needs.source.outputs.pkg }}.dsc" .source
       - name: fetch dependencies
         run: |
           mkdir _pkgs
@@ -162,23 +151,62 @@ jobs:
                "build_${{ matrix.target }}"
           )"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
-      - name: upload packages
-        if: ${{ steps.build.outputs.pkg != '' }}
-        run: |
-          release="${{ needs.source.outputs.release }}"
-          for f in output/*; do
-            ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
-          done
+      - name: upload binary packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: binary
+          path: |
+            output/
+            !output/.*
+          retention-days: 7
   publish:
     needs: [ source, packages ]
-    if: ${{ needs.source.outputs.release != '' }}
+    # Only publish packages, if the build has been triggered by a Git Tag (e.g gardenlinux/1.0.0gardenlinux1)
+    # or if the build package contains the gardenlinux0 suffix which it will get if there has not been a
+    # version released already for the given upstream version. Then, the pipeline automatically assignes this package
+    # to the gardenlinux0 release of the package.
+    if: |
+      contains(github.ref, format('refs/tags/gardenlinux/{0}', needs.source.outputs.source_version)) ||
+      endsWith(needs.source.outputs.source_version, 'gardenlinux0')
+    env:
+      RELEASE_GIT_TAG: ${{ format('gardenlinux/{0}', needs.source.outputs.source_version) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           repository: gardenlinux/package-build
+      - name: check if ${{ env.pkg }} already released
+        id: check
+        run: |
+          if ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" exists "${{ needs.source.outputs.pkg }}"; then
+            echo "skip_release=true" | tee "$GITHUB_OUTPUT"
+          else
+            echo "skip_release=false" | tee "$GITHUB_OUTPUT"
+          fi
+      - name: download source packages
+        if: ${{ steps.check.outputs.skip_release != 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: source
+          path: output/
+      - name: download binary packages
+        if: ${{ steps.check.outputs.skip_release != 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: binary
+          path: output/
+      - name: draft release and upload packages
+        id: release
+        if: ${{ steps.check.outputs.skip_release != 'true' }}
+        run: |
+          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "$RELEASE_GIT_TAG" "${{ github.sha }}" "${{ needs.source.outputs.pkg }}")"
+          for f in output/*; do
+            ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
+          done
+          echo "release=$release" | tee "$GITHUB_OUTPUT"
       - name: publish drafted release
-        run: ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" publish_draft "${{ needs.source.outputs.release }}"
+        if: ${{ steps.check.outputs.skip_release != 'true' }}
+        run: ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" publish_draft "${{ steps.release.outputs.release }}"
   cleanup:
     needs: [ source, packages ]
     if: ${{ always() && contains(needs.*.result, 'failure') }}
