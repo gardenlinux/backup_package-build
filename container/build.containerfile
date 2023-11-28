@@ -16,6 +16,9 @@ RUN apt-get update \
 FROM $arch/$image
 WORKDIR /tmp
 
+# Define Environment variables
+ENV PACKAGE_VERSION=""
+
 # Copy repository configration files for apt 
 COPY container/apt/ /etc/apt/
 

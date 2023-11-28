@@ -64,9 +64,11 @@ case "$action" in
 		commit="$1"; shift
 		name="$1"; shift
 
+		normalized_tag=${tag/\~/\_}
+
 		release="$(post "releases" '{
 			"draft": '"$draft"',
-			"tag_name": "'"$tag"'",
+			"tag_name": "'"$normalized_tag"'",
 			"target_commitish": "'"$commit"'",
 			"name": "'"$name"'"
 		}' | jq -r '.id')"
@@ -78,16 +80,20 @@ case "$action" in
 		release="$1"; shift
 		asset_file="$1"; shift
 
-		asset_name="$(basename "$asset_file")"
+		normalized_asset_file=${asset_file/\~/\_}
+
+		asset_name="$(basename "$normalized_asset_file")"
 		upload "releases/$release/assets?name=$asset_name" < "$asset_file" > /dev/null
-		echo "uploaded $asset_file to $release"
+		echo "uploaded $asset_file to $release ($asset_name)"
 
 		;;
 	"download")
 		release="$1"; shift
 		name="$1"; shift
 
-		asset_id="$(get "releases/$release/assets" | jq -r '.[] | select(.name == "'"$name"'") | .id')"
+		normalized_name=${name/\~/\_}
+
+		asset_id="$(get "releases/$release/assets" | jq -r '.[] | select(.name == "'"$normalized_name"'") | .id')"
 		get_binary "releases/assets/$asset_id" > "$name"
 
 		;;

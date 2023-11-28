@@ -11,7 +11,25 @@ on:
       build_container:
         type: string
         default: ghcr.io/gardenlinux/package-build
+      source:
+        type: string
+        default: ""
+      debian_source:
+        type: string
+        default: ""
       dependencies:
+        type: string
+        default: ""
+      email:
+        type: string
+        default: ""
+      maintainer:
+        type: string
+        default: ""
+      distribution:
+        type: string
+        default: ""
+      message:
         type: string
         default: ""
 jobs:
@@ -22,6 +40,7 @@ jobs:
       build_options: ${{ steps.build.outputs.build_options }}
       release: ${{ steps.release.outputs.release }}
     runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,10 +66,16 @@ jobs:
           cat _pkgs/Packages
       - name: build
         id: build
+        env:
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
+          version=""
+          [ "$GITHUB_REF_TYPE" == "tag" ] && version=${GITHUB_REF_NAME#*/}
           pkg="$(podman run \
                --rm \
                --mount="type=bind,src=$PWD/${GITHUB_ACTION_PATH}/container/bin,dst=/usr/local/sbin,ro" \
+               -e PACKAGE_VERSION="$version" \
                -v "$PWD/input:/input" \
                -v "$PWD/output:/output" \
                -v "$PWD/_pkgs:/pkgs" \
@@ -58,6 +83,7 @@ jobs:
           )"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
           echo "build_options=$(cat output/.build_options)" | tee -a "$GITHUB_OUTPUT"
+          echo "source_name=$(cat output/.source_name)" | tee -a "$GITHUB_OUTPUT"
       - name: check if ${{ env.pkg }} already released
         id: check
         run: |
@@ -69,8 +95,11 @@ jobs:
       - name: draft release and upload source packages
         id: release
         if: ${{ steps.check.outputs.skip_release != 'true' }}
+        env:
+          PKG_NAME: ${{ steps.build.outputs.pkg }}
         run: |
-          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "${{ steps.build.outputs.pkg }}" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
+          tag="gardenlinux/${PKG_NAME#${{ steps.build.outputs.source_name }}_}"
+          release="$(./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" create --draft "$tag" "${{ github.sha }}" "${{ steps.build.outputs.pkg }}")"
           for f in output/*; do
             ./scripts/gh_release "${{ github.token }}" "${{ github.repository }}" upload "$release" "$f"
           done

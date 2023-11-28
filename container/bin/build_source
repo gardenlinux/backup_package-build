@@ -10,38 +10,37 @@ email="contact@gardenlinux.io"
 maintainer="Garden Linux Builder"
 distribution=gardenlinux
 message="Rebuild for Garden Linux."
+debian_source=""
 inputs_file="/input/.github/workflows/build.yml"
 
 main() (
-	DEB_BUILD_OPTIONS="terse $(yq -r '.build_options // ""' < "/input/pkg.yaml")"
-	export DEB_BUILD_OPTIONS
+	# Init some variables
+	name="$(yq -r '.name' < "$inputs_file")"
+	source="$(yq -r '.jobs.build_pkg.with.source // "'$name'"' < "$inputs_file")"
+	debian_source="$(yq -r '.jobs.build_pkg.with.debian_source // "'$debian_source'"' < "$inputs_file")"
+	build_options="terse $(yq -r '.jobs.build_pkg.with.build_options // ""' < "$inputs_file")"
 
-	source="$(yq -r '.source // ""' < "/input/pkg.yaml")"
-	debian_source="$(yq -r '.debian_source // ""' < "/input/pkg.yaml")"
+	# Define Build Options
+	export DEB_BUILD_OPTIONS="$build_options"
 
-	if [[ "$source" = "git+"* ]]; then
-		git_source "${source#git+}"
-	elif [[ "$source" = "native" ]]; then
-		native_source
-	else
-		apt_source "$source"
-	fi
+	# Get sources for building source package
+	# out of it
+	get_sources $source
 
-	# if debian_source defined: remove debian folder from source and replace with debian folder from debian_source
+	# Is the debian_source parameter specified?
+	# If yes, replace the original debian/ directory
+	# with the one provided via debian_source.
 	if [ -n "$debian_source" ]; then
 		mkdir debian_src
 		cd debian_src
-		if [[ "$debian_source" = "git+"* ]]; then
-			git_source "${debian_source#git+}"
-		else
-			apt_source "$debian_source"
-		fi
+		get_sources $debian_source
 		rm -rf ../src/debian
 		mv src/debian ../src/
 		cd ..
 		rm -rf debian_src
 	fi
 
+	# Start preparing and building the source package
 	cd src
 	apply_patches /input
 
@@ -54,20 +53,25 @@ main() (
 	fi
 	
 	dpkg-source --build .
-
 	cd ..
+
+	# Do some cleanup afterwards
 	rm -rf src
 	ls -lah
 
+	# Add some meta files next to the created artifacts
 	echo "$DEB_BUILD_OPTIONS" > .build_options
+	echo "${pkg}" > .source_name
 	ln -s "${pkg}_${version}.dsc" .source
 
+	# Copy all artifacts to the dedicated output directory
 	if [ -d "/output" ]; then
-		{ echo .build_options; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
+		{ echo .build_options; echo .source_name; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
 			sudo cp -d "$file" "/output/$file"
 		done
 	fi
 
+	# Finally, print the package name and version
 	echo "${pkg}_${version}" >&3
 )
 
@@ -128,19 +132,43 @@ apply_patches() (
 	fi
 
 	name="$(yq -r '.name' < "$inputs_file")"
-	version="$(yq -r '.version // ""' < "$1/pkg.yaml")"
-	[ -n "$version" ] || version="$(dpkg-parsechangelog --show-field Version)"
-	email="$(yq -r --arg name "$name" '.jobs[$name].with.email // "'"$email"'"' < "$inputs_file")"
-	maintainer="$(yq -r --arg name "$name" '.jobs[$name].with.maintainer // "'"$maintainer"'"' < "$inputs_file")"
-	distribution="$(yq -r --arg name "$name" '.jobs[$name].with.distribution // "'"$distribution"'"' < "$inputs_file")"
-	version_suffix="$(yq -r '.version_suffix // ""' < "$1/pkg.yaml")"
-	message="$(yq -r --arg name "$name" '.jobs[$name].with.message // "'"$message"'"' < "$inputs_file")"
+	email="$(yq -r '.jobs.build_pkg.with.email // "'"$email"'"' < "$inputs_file")"
+	maintainer="$(yq -r '.jobs.build_pkg.with.maintainer // "'"$maintainer"'"' < "$inputs_file")"
+	distribution="$(yq -r '.jobs.build_pkg.with.distribution // "'"$distribution"'"' < "$inputs_file")"
+	message="$(yq -r '.jobs.build_pkg.with.message // "'"$message"'"' < "$inputs_file")"
 
-	DEBEMAIL="$email" DEBFULLNAME="$maintainer" dch --newversion "$version$version_suffix" --distribution "$distribution" --force-distribution -- "$message"
+	DEBEMAIL="$email" DEBFULLNAME="$maintainer" dch --newversion "$(get_version)" --distribution "$distribution" --force-distribution -- "$message"
 
 	if [ -x "$1/exec.post" ]; then
 		SOURCE="$source" "$1/exec.post"
 	fi
+)
+
+get_sources() (
+	local source=$1
+
+	# What kind of source do we have?
+	if [[ "$source" = "git+"* ]]; then
+		git_source "${source#git+}"
+	elif [[ "$source" = "native" ]]; then
+		native_source
+	else
+		apt_source "$source"
+	fi
+)
+
+get_version() (
+	local version=$PACKAGE_VERSION
+
+	git -C /input config --global --add safe.directory '*'
+
+	# If version is undefined, let's simply use
+	# the version of the upstream package and add 
+	# the git tag to it.
+	[ -n "$version" ] || version="$(dpkg-parsechangelog --show-field Version)gardenlinux~$(git -C /input rev-parse HEAD)"
+
+	# Print the version accordingly
+	echo $version
 )
 
 get_files() (
