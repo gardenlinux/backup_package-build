@@ -19,9 +19,11 @@ main() (
 	source="$(yq -r '.jobs.build_pkg.with.source // "'$name'"' < "$inputs_file")"
 	debian_source="$(yq -r '.jobs.build_pkg.with.debian_source // "'$debian_source'"' < "$inputs_file")"
 	build_options="terse $(yq -r '.jobs.build_pkg.with.build_options // ""' < "$inputs_file")"
+	build_profiles="$(yq -r '.jobs.build_pkg.with.build_profiles // ""' < "$inputs_file")"
 
 	# Define Build Options
 	export DEB_BUILD_OPTIONS="$build_options"
+	export DEB_BUILD_PROFILES="$build_profiles"
 
 	# Set permissions
 	git -C /input config --global --add safe.directory '*'
@@ -64,13 +66,14 @@ main() (
 
 	# Add some meta files next to the created artifacts
 	echo "$DEB_BUILD_OPTIONS" > .build_options
+	echo "$DEB_BUILD_PROFILES" > .build_profiles
 	echo "${pkg}" > .source_name
 	echo "${version}" > .source_version
 	ln -s "${pkg}_${version}.dsc" .source
 
 	# Copy all artifacts to the dedicated output directory
 	if [ -d "/output" ]; then
-		{ echo .build_options; echo .source_name; echo .source_version; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
+		{ echo .build_options; echo .build_profiles; echo .source_name; echo .source_version; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
 			sudo cp -d "$file" "/output/$file"
 		done
 	fi

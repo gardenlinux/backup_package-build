@@ -11,6 +11,12 @@ on:
       build_container:
         type: string
         default: ghcr.io/gardenlinux/package-build
+      build_options:
+        type: string
+        default: ""
+      build_profiles:
+        type: string
+        default: ""
       source:
         type: string
         default: ""
@@ -40,6 +46,7 @@ jobs:
       source_name: ${{ steps.build.outputs.source_name }}
       source_version: ${{ steps.build.outputs.source_version }}
       build_options: ${{ steps.build.outputs.build_options }}
+      build_profiles: ${{ steps.build.outputs.build_profiles }}
       release: ${{ steps.release.outputs.release }}
     runs-on: ubuntu-latest
     steps:
@@ -86,6 +93,7 @@ jobs:
           )"
           echo "pkg=$pkg" | tee -a "$GITHUB_OUTPUT"
           echo "build_options=$(cat output/.build_options)" | tee -a "$GITHUB_OUTPUT"
+          echo "build_profiles=$(cat output/.build_profiles)" | tee -a "$GITHUB_OUTPUT"
           echo "source_name=$(cat output/.source_name)" | tee -a "$GITHUB_OUTPUT"
           echo "source_version=$(cat output/.source_version)" | tee -a "$GITHUB_OUTPUT"
       - name: upload source packages
@@ -125,6 +133,7 @@ jobs:
         run: |
           cd input/
           echo "${{ needs.source.outputs.build_options }}" > .build_options
+          echo "${{ needs.source.outputs.build_profiles}}" > .build_profiles
           ln -s "${{ needs.source.outputs.pkg }}.dsc" .source
       - name: fetch dependencies
         run: |
