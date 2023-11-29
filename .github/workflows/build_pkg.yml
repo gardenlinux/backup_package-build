@@ -38,6 +38,12 @@ on:
       message:
         type: string
         default: ""
+      tag_suffix:
+        type: string
+        default: ""
+      tag_mangel:
+        type: string
+        default: ""
 jobs:
   source:
     name: source package
