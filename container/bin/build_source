@@ -23,6 +23,9 @@ main() (
 	# Define Build Options
 	export DEB_BUILD_OPTIONS="$build_options"
 
+	# Set permissions
+	git -C /input config --global --add safe.directory '*'
+
 	# Get sources for building source package
 	# out of it
 	get_sources $source
@@ -62,11 +65,12 @@ main() (
 	# Add some meta files next to the created artifacts
 	echo "$DEB_BUILD_OPTIONS" > .build_options
 	echo "${pkg}" > .source_name
+	echo "${version}" > .source_version
 	ln -s "${pkg}_${version}.dsc" .source
 
 	# Copy all artifacts to the dedicated output directory
 	if [ -d "/output" ]; then
-		{ echo .build_options; echo .source_name; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
+		{ echo .build_options; echo .source_name; echo .source_version; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
 			sudo cp -d "$file" "/output/$file"
 		done
 	fi
@@ -160,12 +164,21 @@ get_sources() (
 get_version() (
 	local version=$PACKAGE_VERSION
 
-	git -C /input config --global --add safe.directory '*'
-
 	# If version is undefined, let's simply use
 	# the version of the upstream package and add 
 	# the git tag to it.
-	[ -n "$version" ] || version="$(dpkg-parsechangelog --show-field Version)gardenlinux~$(git -C /input rev-parse HEAD)"
+	if [ -z "$version" ]; then
+		package_version=$(dpkg-parsechangelog --show-field Version)
+		commit_hash=$(git -C /input rev-parse HEAD)
+
+		# No version has been provided. Check if there is already a Garden Linux version 0
+		# if not, the current package will be the first one. Otherwise, simply use the commit hash.
+		if git -C /input tag | grep -q "gardenlinux/${package_version}gardenlinux0"; then
+			version="${package_version}gardenlinux~${commit_hash}"
+		else
+			version="${package_version}gardenlinux0"
+		fi
+	fi
 
 	# Print the version accordingly
 	echo $version
