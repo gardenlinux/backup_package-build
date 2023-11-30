@@ -86,7 +86,7 @@ Replace `project` to other package name of your package-project. Replace `branch
 4. Commit and push the new workflow file to your project's repository.
 5. The `build_pkg.yml` workflow will be triggered based on the provided inputs.
 
-Note: Make sure to adjust and use the matches branch name on your package-project in the uses field to match the desired branchname of the build_pkg.yaml@branchname workflow.
+> Note: Make sure to adjust and use the matches branch name on your package-project in the uses field to match the desired branch name of the `build_pkg.yaml@branchname`` workflow.
 
 ## Contributing
 
