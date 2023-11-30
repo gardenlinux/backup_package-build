@@ -176,7 +176,7 @@ get_version() (
 
 		# No version has been provided. Check if there is already a Garden Linux version 0
 		# if not, the current package will be the first one. Otherwise, simply use the commit hash.
-		if git -C /input tag | grep -q "gardenlinux/${package_version}gardenlinux0"; then
+		if (git -C /input rev-parse --abbrev-ref HEAD | grep -qv "main") || (git -C /input tag | grep -q "gardenlinux/${package_version}gardenlinux0"); then
 			version="${package_version}gardenlinux~${commit_hash}"
 		else
 			version="${package_version}gardenlinux0"
