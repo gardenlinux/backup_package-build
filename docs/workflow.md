@@ -36,18 +36,21 @@ The `build_pkg.yml` workflow is a reusable workflow that can be called by other 
 The `build_pkg.yml` workflow can be triggered by calling it with specific input parameters.
 
 Input Parameters available in `build_pkg.yml`:
-- `repository` (string, default: ${{ github.repository }}): The repository to build the package from.
-- `ref` (string, default: ${{ github.sha }}): The ref (commit or branch) to build the package from.
-- `build_container` (string, default: ghcr.io/gardenlinux/package-build): The container image used for building the package.
-- `dependencies` (string, default: ""): Comma-separated list of repositories and tags to fetch dependencies from.
-- `debemail` (string, default: "contact@gardenlinux.io"): The Debian package maintainer email.
-- `debfullname` (string, default: "Garden Linux Builder"): The Debian package maintainer full name.
-- `distribution` (string, default: "gardenlinux"): The target distribution for the package.
-- `message` (string, default: "Rebuild for Garden Linux."): The changelog entry message for the package build.
-- `build_options` (string): Additional build options for the package.
-- `source_name` (string, default: "${{ github.workflow }}"): The name of the source package.
-- `source_version` (string): The version of the source package.
-- `version_suffix` (string, default: "gl0"): The version suffix for the package.
+| Parameter | Type | Description |
+| --------- | ---- | ------------|
+|`repository`|**Type:** string<br>**Default:** `${{ github.repository }}`| The repository to build the package from.|
+|`ref`|**Type:** string<br>**Default:** `${{ github.sha }}`| The ref (commit or branch) to build the package from.|
+|`build_container`|**Type:** string<br>**Default:** `ghcr.io/gardenlinux/package-build`| The container image used for building the package.|
+|`dependencies`|**Type:** string| Comma-separated list of repositories and tags to fetch dependencies from.|
+|`source`|**Type:** string| The source name of the package. There are three values that one can choose from:<br>- Debian Source Package: `{SOURCE PACKAGE NAME}`<br>- Git Source: `git+{GIT URL}`<br>- Native Build: `native`|
+|`debian_source`|**Type:** string| Defines from which source the `debian/` directory should be used. There are three values that one can choose from:<br>- Debian Source Package: `{SOURCE PACKAGE NAME}`<br>- Git Source: `git+{GIT URL}`<br>- Native Build: `native`|
+|`email`|**Type:** string<br>**Default:** `contact@gardenlinux.io`| The Debian package maintainer email.|
+|`maintainer`|**Type:** string<br>**Default:** `Garden Linux Builder`| The Debian package maintainer full name.|
+|`distribution`|**Type:** string<br>**Default:** `gardenlinux`| The target distribution for the package.|
+|`message`|**Type:** string<br>**Default:** `Rebuild for Garden Linux.`| The changelog entry message for the package build.|
+|`build_option`|**Type:** string| Additional build options for the package build. Build option `terse` is always set.|
+|`build_profiles`|**Type:** string| Additional build profiles for the package build.|
+
 
 #### Job Details
 
@@ -73,12 +76,12 @@ To use the `build_pkg.yml` workflow defined in this repository, follow these ste
 ```
 Replace `project` to other package name of your package-project. Replace `branchname` with the specific branch or tag of the build_pkg.yaml workflow you want to use. The default is `main` branch.
 
-3. Call the gardenlinux/package-build/.github/workflows/build_pkg.yml@branchname workflow with the specific input parameters under `with:` specific to your project. such as `debemail`, `debfullname`, `distribution`, `message` and others mentioned in the Workflow Configuration section. The default values will be use if wihout provide any input parameters.
+3. Call the gardenlinux/package-build/.github/workflows/build_pkg.yml@branchname workflow with the specific input parameters under `with:` specific to your project. such as `email`, `maintainer`, `distribution`, `message` and others mentioned in the Workflow Configuration section. The default values will be use if wihout provide any input parameters.
 ```
        uses: gardenlinux/package-build/.github/workflows/build_pkg.yml@branchname
        with:
-         debemail: your@address
-         debfullname: "Your Name"
+         email: your@address
+         maintainer: "Your Name"
 ```
 4. Commit and push the new workflow file to your project's repository.
 5. The `build_pkg.yml` workflow will be triggered based on the provided inputs.
