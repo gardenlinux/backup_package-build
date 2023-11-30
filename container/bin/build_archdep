@@ -8,7 +8,9 @@ exec 1>&2
 main() (
 	input_dir="${1:-/input}"
 	DEB_BUILD_OPTIONS="$(cat "$input_dir/.build_options")"
+	DEB_BUILD_PROFILES="$(cat "$input_dir/.build_profiles")"
 	export DEB_BUILD_OPTIONS
+	export DEB_BUILD_PROFILES
 
 	dsc="$(realpath "$input_dir/.source")"
 	dpkg_arch="$(dpkg --print-architecture)"
