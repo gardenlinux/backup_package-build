@@ -38,10 +38,10 @@ on:
       message:
         type: string
         default: ""
-      tag_suffix:
+      git_filter:
         type: string
         default: ""
-      tag_mangel:
+      git_tag_match:
         type: string
         default: ""
 jobs:
