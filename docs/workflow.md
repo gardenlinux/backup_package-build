@@ -2,6 +2,17 @@
 
 This repository contains the Gardenlinux workflows for building and deploying containers and provide a resuable workflow for other packages to build and depolying.
 
+- [Workflow](#workflows)
+- [Workflow Detail](#workflow-details)
+  - [Build Container](#build-container)
+    - [Workflow Configuration](#workflow-configuration)
+    - [Job Details](#job-details)
+  - [Build Package](#build-package)
+    - [Workflow Configuration](#workflow-configuration-1)
+    - [Job Details](#job-details-1)
+    - [Usage](#usage)
+- [Contributing](#contributing)
+
 ## Workflows
 
 The following workflows are defined in this repository:
