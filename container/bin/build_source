@@ -20,7 +20,7 @@ main() (
 	debian_source="$(yq -r '.jobs.build_pkg.with.debian_source // "'$debian_source'"' < "$inputs_file")"
 	build_options="terse $(yq -r '.jobs.build_pkg.with.build_options // ""' < "$inputs_file")"
 	build_profiles="$(yq -r '.jobs.build_pkg.with.build_profiles // ""' < "$inputs_file")"
-	git_filter="$(yq -r '.jobs.build_pkg.with.git_filter // "(.*)"' < "$inputs_file")"
+	git_filter="$(yq -r '.jobs.build_pkg.with.git_filter // ".*"' < "$inputs_file")"
 	git_tag_match="$(yq -r '.jobs.build_pkg.with.git_tag_match // "(.*)"' < "$inputs_file")"
 
 	# Define Build Options
@@ -85,7 +85,7 @@ main() (
 )
 
 apt_source() (
-	apt-get source --only-source --download-only "$1"
+	apt-get source -o APT::Default-Release="testing" --only-source --download-only "$1"
 	orig=(*.orig.tar.*)
 	debian=(*.debian.tar.*)
 	dsc=(*.dsc)
@@ -104,8 +104,8 @@ apt_source() (
 
 git_source() (
 	IFS='#' read -r url ref <<< "$1"
-	git clone --depth 1 --bare --branch "$(get_latest_tag)" --depth 1 "$url" src.git
-	GIT_DIR=src.git git archive --prefix src/ "$(get_latest_tag)" > orig.tar
+	git clone "$url" src.git
+	git -C src.git archive --prefix src/ "$(get_git_tag)" > orig.tar
 	rm -rf src.git
 	tar -x < orig.tar
 )
@@ -174,39 +174,61 @@ get_sources() (
 	fi
 )
 
-get_tag_version() (
+get_git_tag() (
 	local tag
 	if [ -z $PACKAGE_VERSION ]; then
-		tag=$(get_latest_tag)
+		tag=$(get_latest_git_tag)
 	else
-	  tag=$(get_tag_by_version ${PACKAGE_VERSION#gardenlinux.*})
+		tag=$(get_git_tag_by_version ${PACKAGE_VERSION%-0gardenlinux*})
 	fi
 	echo $tag
 )
 
-get_latest_tag() (
-  IFS='#' read -r url ref <<< "${source_type#git+}"
-  echo $(git ls-remote --tags --refs $url | sed "s#.*\/##" | \
-	  grep -E "$git_filter" | | sort -V | tail -n1)
-	  #grep -E "$git_filter" | sed -E "s#$git_tag_match#\1#" | sort -V | tail -n1)
+get_latest_git_tag() (
+	local latest_tag
+
+	IFS='#' read -r url ref <<< "${source#git+}"
+	latest_tag="$(git ls-remote --tags --refs $url | sed "s#.*\/##" | grep -E "$git_filter" | sort -V | tail -n1)"
+
+	echo $latest_tag
+)
+
+get_version_by_git_tag() (
+	local version tag
+	tag=$1
+
+	version=$(echo $tag | sed -E "s#$git_tag_match#\1#")
+	echo $version
+)
+
+get_git_tag_by_version() (
+	local tag tags version
+	version=$1
+
+	IFS='#' read -r url ref <<< "${source#git+}"
+	tags=$(git ls-remote --tags --refs $url | sed "s#.*\/##" | grep -E "$git_filter")
+
+	for t in $tags; do
+		if [ "$(get_version_by_git_tag $t)" == "$version" ]; then
+			echo $t
+			exit 0
+		fi
+	done
 )
 
 get_upstream_version() (
 	local source_type=$1
+	local upstream_version
 
 	# What kind of source type do we have?
-        if [[ "$source_type" = "git+"* ]]; then
-		get_latest_tag
+	if [[ "$source_type" = "git+"* ]]; then
+		latest_tag=$(get_latest_git_tag)
+		upstream_version="$(get_version_by_git_tag $latest_tag)-0"
 	else
-                native_source
-        fi
+		upstream_version=$(dpkg-parsechangelog --show-field Version)
+	fi
 
-	# Append revision -0 on fetched latest git tagged version
-	# use -0 to keep it less than revision -1 from debian
-	# this allows us to use debian version in ther future
-	latest_tag=$(get_latest_tag)
-	package_version="${latest_tag}-0"
-	echo $package_version
+	echo $upstream_version
 )
 
 get_version() (
@@ -215,16 +237,17 @@ get_version() (
 	# If version is undefined, let's simply use
 	# the version of the upstream package and add 
 	# the git tag to it.
+	if [ -z $version ]; then
+		commit_hash=$(git -C /input rev-parse HEAD)
+		package_version=$(get_upstream_version $source)
 
-	commit_hash=$(git -C /input rev-parse HEAD)
-	package_version=$(get_upstream_version $source_type)
-
-	# No version has been provided. Check if there is already a Garden Linux version 0
-	# if not, the current package will be the first one. Otherwise, simply use the commit hash.
-	if (git -C /input rev-parse --abbrev-ref HEAD | grep -qv "main") || (git -C /input tag | grep -q "gardenlinux/${package_version}gardenlinux0"); then
-		version="${package_version}gardenlinux~${commit_hash}"
-	else
-		version="${package_version}gardenlinux0"
+		# No version has been provided. Check if there is already a Garden Linux version 0
+		# if not, the current package will be the first one. Otherwise, simply use the commit hash.
+		if (git -C /input rev-parse --abbrev-ref HEAD | grep -qv "main") || (git -C /input tag | grep -q "gardenlinux/${package_version}gardenlinux0"); then
+			version="${package_version}gardenlinux~${commit_hash}"
+		else
+			version="${package_version}gardenlinux0"
+		fi
 	fi
 
 	# Print the version accordingly
