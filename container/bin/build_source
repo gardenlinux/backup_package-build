@@ -20,6 +20,8 @@ main() (
 	debian_source="$(yq -r '.jobs.build_pkg.with.debian_source // "'$debian_source'"' < "$inputs_file")"
 	build_options="terse $(yq -r '.jobs.build_pkg.with.build_options // ""' < "$inputs_file")"
 	build_profiles="$(yq -r '.jobs.build_pkg.with.build_profiles // ""' < "$inputs_file")"
+	git_filter="$(yq -r '.jobs.build_pkg.with.git_filter // ".*"' < "$inputs_file")"
+	git_tag_match="$(yq -r '.jobs.build_pkg.with.git_tag_match // "(.*)"' < "$inputs_file")"
 
 	# Define Build Options
 	export DEB_BUILD_OPTIONS="$build_options"
@@ -83,7 +85,7 @@ main() (
 )
 
 apt_source() (
-	apt-get source --only-source --download-only "$1"
+	apt-get source -o APT::Default-Release="testing" --only-source --download-only "$1"
 	orig=(*.orig.tar.*)
 	debian=(*.debian.tar.*)
 	dsc=(*.dsc)
@@ -102,8 +104,8 @@ apt_source() (
 
 git_source() (
 	IFS='#' read -r url ref <<< "$1"
-	git clone --bare --branch "$ref" --depth 1 "$url" src.git
-	GIT_DIR=src.git git archive --prefix src/ "$ref" > orig.tar
+	git clone "$url" src.git
+	git -C src.git archive --prefix src/ "$(get_git_tag)" > orig.tar
 	rm -rf src.git
 	tar -x < orig.tar
 )
@@ -144,7 +146,15 @@ apply_patches() (
 	distribution="$(yq -r '.jobs.build_pkg.with.distribution // "'"$distribution"'"' < "$inputs_file")"
 	message="$(yq -r '.jobs.build_pkg.with.message // "'"$message"'"' < "$inputs_file")"
 
-	DEBEMAIL="$email" DEBFULLNAME="$maintainer" dch --newversion "$(get_version)" --distribution "$distribution" --force-distribution -- "$message"
+	if [ -f debian/changelog ]; then
+		DEBEMAIL="$email" DEBFULLNAME="$maintainer" dch \
+		--newversion "$(get_version)" --distribution "$distribution" \
+		--force-distribution -- "$message"
+	else
+		DEBEMAIL="$email" DEBFULLNAME="$maintainer" EDITOR=true dch --create --package $name \
+                --newversion "$(get_version)" --distribution "$distribution" \
+                --force-distribution -- "$message"
+	fi
 
 	if [ -x "$1/exec.post" ]; then
 		SOURCE="$source" "$1/exec.post"
@@ -152,16 +162,73 @@ apply_patches() (
 )
 
 get_sources() (
-	local source=$1
+	local source_type=$1
 
-	# What kind of source do we have?
-	if [[ "$source" = "git+"* ]]; then
+	# What kind of source type do we have?
+	if [[ "$source_type" = "git+"* ]]; then
 		git_source "${source#git+}"
-	elif [[ "$source" = "native" ]]; then
+	elif [[ "$source_type" = "native" ]]; then
 		native_source
 	else
-		apt_source "$source"
+		apt_source "$source_type"
 	fi
+)
+
+get_git_tag() (
+	local tag
+	if [ -z $PACKAGE_VERSION ]; then
+		tag=$(get_latest_git_tag)
+	else
+		tag=$(get_git_tag_by_version ${PACKAGE_VERSION%-0gardenlinux*})
+	fi
+	echo $tag
+)
+
+get_latest_git_tag() (
+	local latest_tag
+
+	IFS='#' read -r url ref <<< "${source#git+}"
+	latest_tag="$(git ls-remote --tags --refs $url | sed "s#.*\/##" | grep -E "$git_filter" | sort -V | tail -n1)"
+
+	echo $latest_tag
+)
+
+get_version_by_git_tag() (
+	local version tag
+	tag=$1
+
+	version=$(echo $tag | sed -E "s#$git_tag_match#\1#")
+	echo $version
+)
+
+get_git_tag_by_version() (
+	local tag tags version
+	version=$1
+
+	IFS='#' read -r url ref <<< "${source#git+}"
+	tags=$(git ls-remote --tags --refs $url | sed "s#.*\/##" | grep -E "$git_filter")
+
+	for t in $tags; do
+		if [ "$(get_version_by_git_tag $t)" == "$version" ]; then
+			echo $t
+			exit 0
+		fi
+	done
+)
+
+get_upstream_version() (
+	local source_type=$1
+	local upstream_version
+
+	# What kind of source type do we have?
+	if [[ "$source_type" = "git+"* ]]; then
+		latest_tag=$(get_latest_git_tag)
+		upstream_version="$(get_version_by_git_tag $latest_tag)-0"
+	else
+		upstream_version=$(dpkg-parsechangelog --show-field Version)
+	fi
+
+	echo $upstream_version
 )
 
 get_version() (
@@ -170,9 +237,9 @@ get_version() (
 	# If version is undefined, let's simply use
 	# the version of the upstream package and add 
 	# the git tag to it.
-	if [ -z "$version" ]; then
-		package_version=$(dpkg-parsechangelog --show-field Version)
+	if [ -z $version ]; then
 		commit_hash=$(git -C /input rev-parse HEAD)
+		package_version=$(get_upstream_version $source)
 
 		# No version has been provided. Check if there is already a Garden Linux version 0
 		# if not, the current package will be the first one. Otherwise, simply use the commit hash.

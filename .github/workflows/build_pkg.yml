@@ -38,6 +38,12 @@ on:
       message:
         type: string
         default: ""
+      git_filter:
+        type: string
+        default: ""
+      git_tag_match:
+        type: string
+        default: ""
 jobs:
   source:
     name: source package
