@@ -1,0 +1,19 @@
+digraph G {
+    "deb.debian.org/debian/dists/testing" -> "github.com/gardenlinux/package-snapshot" [ label="pulled daily at 00:00 UTC" ]
+    "github.com/gardenlinux/package-snapshot" -> "s3://gardenlinux-repo-test" [ label="publishes snapshot (named as GL version)\nsnapshot should be immutable" ]
+    "github.com/gardenlinux/package-snapshot" -> "ghcr.io/gardenlinux/package-snapshot" [ label="creates & publishes" ]
+    "s3://gardenlinux-repo-test" -> "ghcr.io/gardenlinux/package-snapshot" [ label="ref in /etc/apt/sources", style="dashed" ]
+    "ghcr.io/gardenlinux/package-snapshot" -> "ghcr.io/gardenlinux/package-build" [ label="based on", style="dashed" ]
+    "github.com/gardenlinux/package-build" -> "ghcr.io/gardenlinux/package-build" [ label="creates & publishes" ]
+    "github.com/gardenlinux/package-build" -> "github.com/gardenlinux/package-A" [ label="uses workflow file" ]
+    "ghcr.io/gardenlinux/package-build" -> "github.com/gardenlinux/package-A" [ label="uses build container" ]
+    "github.com/gardenlinux/package-A" -> "github.com/gardenlinux/package-A/releases/<version>" [ label="creates & publishes" ]
+    "github.com/gardenlinux/package-build" -> "github.com/gardenlinux/package-B" [ label="uses workflow file" ]
+    "ghcr.io/gardenlinux/package-build" -> "github.com/gardenlinux/package-B" [ label="uses build container" ]
+    "github.com/gardenlinux/package-B" -> "github.com/gardenlinux/package-B/releases/<version>" [ label="creates & publishes" ]
+    "github.com/gardenlinux/package-A/releases/<version>" -> "github.com/gardenlinux/package-B" [ label="pulled in as dependency" ]
+    "github.com/gardenlinux/package-publish" -> aptly -> "s3://gardenlinux-repo"
+    "github.com/gardenlinux/package-A/releases/<version>" -> "github.com/gardenlinux/package-publish" [ label="collects" ]
+    "github.com/gardenlinux/package-B/releases/<version>" -> "github.com/gardenlinux/package-publish" [ label="collects" ]
+    "s3://gardenlinux-repo-test" -> "github.com/gardenlinux/package-publish" [ label="mirror dependencies" ]
+}
