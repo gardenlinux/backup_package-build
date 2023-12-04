@@ -28,7 +28,7 @@ The `build_container.yml` workflow is responsible for building container images 
 
 #### Workflow Configuration
 
-The `container/` folder in this project contains all it's configurations. The `build_container.yml` workflow is triggered on every push to the repository. 
+The `container/` folder in this project contains all its configurations. The `build_container.yml` workflow is triggered on every push to the repository. 
 
 #### Job Details
 
@@ -61,6 +61,8 @@ Input Parameters available in `build_pkg.yml`:
 |`message`|**Type:** string<br>**Default:** `Rebuild for Garden Linux.`| The changelog entry message for the package build.|
 |`build_option`|**Type:** string| Additional build options for the package build. Build option `terse` is always set.|
 |`build_profiles`|**Type:** string| Additional build profiles for the package build.|
+|`git_filter`|**Type:** string<br>**Default:** `.*`<br>**Scope:** `source: git`| This parameter let's you filter Git tags that should be skipped for the upstream version determination. |
+|`git_tag_match`|**Type:** string<br>**Default:** `(.*)`<br>**Scope:** `source: git`| This parameter defines what part of a given Git Tag is considered to be the upstream version. The first regex match group is always the designated upstream version. |
 
 
 #### Job Details
@@ -96,8 +98,6 @@ Replace `project` to other package name of your package-project. Replace `branch
 ```
 4. Commit and push the new workflow file to your project's repository.
 5. The `build_pkg.yml` workflow will be triggered based on the provided inputs.
-
-> Note: Make sure to adjust and use the matches branch name on your package-project in the uses field to match the desired branch name of the `build_pkg.yaml@branchname`` workflow.
 
 ## Contributing
 

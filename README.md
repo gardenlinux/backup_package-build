@@ -10,6 +10,7 @@ It contains:
   - `bin/`: This folder contains executable scripts installs into the container. 
     > Note: Also available via bind mount in the workflow for enable the possibility of workflow development tests.
   - `conf/`: This folder contains containers configurations on installed packages list and native container setup.
+- `docs/`: This directory contains the documentation related to the package pipeline of Garden Linux.
 - `misc/`: This folder contains miscellaneous files related to the project.
 - `scripts/`: This folder contains scripts for it's github actions workflow.
 
