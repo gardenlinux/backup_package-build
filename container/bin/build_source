@@ -122,6 +122,9 @@ native_source() (
 
 auto_decompress() (
 	case "${1##*.}" in
+		bz2)
+			bzip2 -d < "$1"
+			;;
 		gz)
 			gzip -d < "$1"
 			;;
