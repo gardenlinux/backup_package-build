@@ -53,6 +53,9 @@ main() (
 
 	pkg="$(dpkg-parsechangelog --show-field Source)"
 	version="$(dpkg-parsechangelog --show-field Version)"
+	# Version for the orig tarball should not contains epoch
+	version="${version#*:}"
+	# Version for the orig tarball should not contains revision
 	version_orig="${version%-*}"
 	if [ -f ../orig.tar ]; then
 		xz < ../orig.tar > "../${pkg}_${version_orig}.orig.tar.xz"
@@ -70,18 +73,20 @@ main() (
 	echo "$DEB_BUILD_OPTIONS" > .build_options
 	echo "$DEB_BUILD_PROFILES" > .build_profiles
 	echo "${pkg}" > .source_name
-	echo "${version}" > .source_version
-	ln -s "${pkg}_${version}.dsc" .source
+	# The package version should not contains epoch
+	pkg_version="${version#*:}"
+	echo "${pkg_version}" > .source_version
+	ln -s "${pkg}_${pkg_version}.dsc" .source
 
 	# Copy all artifacts to the dedicated output directory
 	if [ -d "/output" ]; then
-		{ echo .build_options; echo .build_profiles; echo .source_name; echo .source_version; echo .source; echo "${pkg}_${version}.dsc"; get_files < "${pkg}_${version}.dsc"; } | while read file; do
+		{ echo .build_options; echo .build_profiles; echo .source_name; echo .source_version; echo .source; echo "${pkg}_${pkg_version}.dsc"; get_files < "${pkg}_${pkg_version}.dsc"; } | while read file; do
 			sudo cp -d "$file" "/output/$file"
 		done
 	fi
 
 	# Finally, print the package name and version
-	echo "${pkg}_${version}" >&3
+	echo "${pkg}_${pkg_version}" >&3
 )
 
 apt_source() (

@@ -24,18 +24,20 @@ main() (
 	cd src
 	pkg="$(dpkg-parsechangelog --show-field Source)"
 	version="$(dpkg-parsechangelog --show-field Version)"
+	# Use package's version name without epoch
+	pkg_version="${version#*:}"
 	dpkg-buildpackage --no-sign --build=all
 	cd ..
 	rm -rf src
 	ls -lah
 
 	if [ -d "/output" ]; then
-		{ echo "${pkg}_${version}_all.changes"; get_files < "${pkg}_${version}_all.changes"; } | while read file; do
+		{ echo "${pkg}_${pkg_version}_all.changes"; get_files < "${pkg}_${pkg_version}_all.changes"; } | while read file; do
 			sudo cp -d "$file" "/output/$file"
 		done
 	fi
 
-	echo "${pkg}_${version}_all" >&3
+	echo "${pkg}_${pkg_version}_all" >&3
 )
 
 get_files() (
