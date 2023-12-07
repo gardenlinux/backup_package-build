@@ -1,4 +1,4 @@
 Types: deb-src
 URIs: http://deb.debian.org/debian
-Suites: bullseye bookworm trixie sid
+Suites: bullseye bookworm trixie sid experimental
 Components: main
