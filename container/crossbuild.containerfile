@@ -42,19 +42,19 @@ RUN mkdir /pkgs \
     && DEBIAN_FRONTEND=noninteractive apt-get install \
        --no-install-recommends -y build-essential ca-certificates debhelper \
        devscripts git yq $(awk '{ print $1 }' pkgs) \
-    && apt-mark hold $(awk '{ print $1 }' pkgs) \
-    && gcc --print-search-dir \
-    && echo 'int main() { return 0; }' > main.c \
-    && gcc -o main main.c \
-    && ./main
+    && apt-mark hold $(awk '{ print $1 }' pkgs)
 
 # Copy the native build artifacts from the previous stage
 COPY --from=native /native /native
 
 RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ print $1 }' pkgs)" ]
 
-# Clean up /tmp
-RUN find /tmp -mindepth 1 -delete
+# Run gcc test after setup_native and then clean up /tmp
+RUN gcc --print-search-dir \
+    && echo 'int main() { return 0; }' > main.c \
+    && gcc -o main main.c \
+    && ./main \
+    && find /tmp -mindepth 1 -delete
 
 # Copy the build scripts from bin to /usr/local/bin
 COPY container/bin/ /usr/local/bin
