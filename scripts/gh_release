@@ -65,6 +65,8 @@ case "$action" in
 		name="$1"; shift
 
 		normalized_tag=${tag/\~/\_}
+		# Replace epoch colon ":" with a percent sign "%" in the tag.
+		normalized_tag=${normalized_tag/\:/\%}
 
 		release="$(post "releases" '{
 			"draft": '"$draft"',
