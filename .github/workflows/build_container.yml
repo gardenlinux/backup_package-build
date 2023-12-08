@@ -1,5 +1,4 @@
 on:
-  push:
   workflow_dispatch:
     inputs:
       version:
@@ -26,20 +25,20 @@ jobs:
           set -x
           cd container
           if [ ${{ matrix.host }} = ${{ matrix.target }} ]; then
-            podman build --build-arg arch=${{ matrix.host }} -f build.containerfile -t ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version || 'latest' || 'latest' }} .
+            podman build --build-arg arch=${{ matrix.host }} -f build.containerfile -t ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version }} .
           else
             case ${{ matrix.target }} in
               amd64) gnu_arch=x86-64 ;;
               arm64v8) gnu_arch=aarch64 ;;
             esac
-            podman build --build-arg native_arch=${{ matrix.host }} --build-arg target_arch=${{ matrix.target }} --build-arg gnu_arch=$gnu_arch -f crossbuild.containerfile -t ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version || 'latest' || 'latest' }} .
+            podman build --build-arg native_arch=${{ matrix.host }} --build-arg target_arch=${{ matrix.target }} --build-arg gnu_arch=$gnu_arch -f crossbuild.containerfile -t ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version }} .
           fi
       - name: publish
         if: ${{ inputs.publish }}
         run: |
           podman login -u token -p ${{ github.token }} ghcr.io
-          podman push ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version || 'latest' || 'latest' }}
-          podman inspect ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version || 'latest' || 'latest' }}
+          podman push ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version }}
+          podman inspect ghcr.io/${{ github.repository }}/host-${{ matrix.host }}/target-${{ matrix.target }}:${{ inputs.version }}
   publish:
     runs-on: ubuntu-latest
     needs: build
@@ -48,13 +47,13 @@ jobs:
       - name: publish
         run: |
           podman login -u token -p ${{ github.token }} ghcr.io
-          podman manifest create ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version || 'latest' }}
-          podman manifest add --arch amd64 ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version || 'latest' }} ghcr.io/${{ github.repository }}/host-amd64/target-amd64:${{ inputs.version || 'latest' }}
-          podman manifest add --arch arm64 ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version || 'latest' }} ghcr.io/${{ github.repository }}/host-arm64/target-amd64:${{ inputs.version || 'latest' }}
-          podman push ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version || 'latest' }}
-          podman manifest inspect ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version || 'latest' }}
-          podman manifest create ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version || 'latest' }}
-          podman manifest add --arch amd64 ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version || 'latest' }} ghcr.io/${{ github.repository }}/host-amd64/target-arm64v8:${{ inputs.version || 'latest' }}
-          podman manifest add --arch arm64 ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version || 'latest' }} ghcr.io/${{ github.repository }}/host-arm64/target-arm64v8:${{ inputs.version || 'latest' }}
-          podman push ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version || 'latest' }}
-          podman manifest inspect ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version || 'latest' }}
+          podman manifest create ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version }}
+          podman manifest add --arch amd64 ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version }} ghcr.io/${{ github.repository }}/host-amd64/target-amd64:${{ inputs.version }}
+          podman manifest add --arch arm64 ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version }} ghcr.io/${{ github.repository }}/host-arm64v8/target-amd64:${{ inputs.version }}
+          podman push ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version }}
+          podman manifest inspect ghcr.io/${{ github.repository }}/target-amd64:${{ inputs.version }}
+          podman manifest create ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version }}
+          podman manifest add --arch amd64 ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version }} ghcr.io/${{ github.repository }}/host-amd64/target-arm64v8:${{ inputs.version }}
+          podman manifest add --arch arm64 ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version }} ghcr.io/${{ github.repository }}/host-arm64v8/target-arm64v8:${{ inputs.version }}
+          podman push ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version }}
+          podman manifest inspect ghcr.io/${{ github.repository }}/target-arm64v8:${{ inputs.version }}
