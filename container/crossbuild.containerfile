@@ -53,7 +53,7 @@ RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ p
 RUN gcc --print-search-dir \
     && echo 'int main() { return 0; }' > main.c \
     && gcc -o main main.c \
-    && ./main
+    && ./main \
     && find /tmp -mindepth 1 -delete
 
 # Copy the build scripts from bin to /usr/local/bin
