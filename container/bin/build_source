@@ -248,7 +248,7 @@ get_version() (
 	if [ -z $version ]; then
 		package_version=$(get_upstream_version $source)
 		git_commit_hash=$(git -C /input rev-parse HEAD)
-		git_branch=$(git -C /input branch --show-current)
+		git_branch=$(git -C /input name-rev --name-only --refs="refs/heads/*" HEAD)
 		git_tags=$(git -C /input tag)
 
 		# No version has been provided. Check if there is already a gardenlinux0 version.
