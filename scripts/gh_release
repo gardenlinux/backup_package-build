@@ -64,7 +64,8 @@ case "$action" in
 		commit="$1"; shift
 		name="$1"; shift
 
-		normalized_tag=${tag/\~/\_}
+		# Replace all the tilde "~" with "_" underscore in the tag.
+		normalized_tag=${tag//\~/_}
 		# Replace epoch colon ":" with a percent sign "%" in the tag.
 		normalized_tag=${normalized_tag/\:/\%}
 
