@@ -42,18 +42,18 @@ function export_elf (
 		chmod +x "$new_file"
 	fi
 	patchelf --remove-rpath "$new_file"
-	if interpreter="$(patchelf --print-interpreter "$new_file" 2> /dev/null)"; then
-		new_interpreter="/native/$(basename "$interpreter")"
-		[ -e "$new_interpreter" ] || export_elf "$interpreter"
-		chmod 755 "$new_interpreter"
-		patchelf --set-interpreter "$new_interpreter" "$new_file"
-	fi
 	patchelf --print-needed "$new_file" | while read lib; do
 		lib_path="$(realpath "$(ldconfig -p | grep "^\s*$lib " | awk -F ' => ' '{ print $2 }' | head -n 1)")"
 		new_lib="/native/$(basename "$lib_path")"
 		[ -e "$new_lib" ] || export_elf "$lib_path"
 		patchelf --replace-needed "$lib" "$new_lib" "$new_file"
 	done
+	if interpreter="$(patchelf --print-interpreter "$new_file" 2> /dev/null)"; then
+		new_interpreter="/native/$(basename "$interpreter")"
+		[ -e "$new_interpreter" ] || export_elf "$interpreter"
+		chmod 755 "$new_interpreter"
+		patchelf --set-interpreter "$new_interpreter" "$new_file"
+	fi
 
 	echo "exported $file -> $new_file"
 	ldd "$new_file" 2> /dev/null || true
