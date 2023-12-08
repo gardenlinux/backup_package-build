@@ -242,17 +242,20 @@ get_upstream_version() (
 get_version() (
 	local version=$PACKAGE_VERSION
 
-	# If version is undefined, let's simply use
-	# the version of the upstream package and add 
-	# the git tag to it.
+	# If version is undefined, let's simply build the
+	# package version by our own. Use the upstream version
+	# and add the gardenlinux suffix to it.
 	if [ -z $version ]; then
-		commit_hash=$(git -C /input rev-parse HEAD)
 		package_version=$(get_upstream_version $source)
+		git_commit_hash=$(git -C /input rev-parse HEAD)
+		git_branch=$(git -C /input branch --show-current)
+		git_tags=$(git -C /input tag)
 
-		# No version has been provided. Check if there is already a Garden Linux version 0
-		# if not, the current package will be the first one. Otherwise, simply use the commit hash.
-		if (git -C /input rev-parse --abbrev-ref HEAD | grep -qv "main") || (git -C /input tag | grep -q "gardenlinux/${package_version}gardenlinux0"); then
-			version="${package_version}gardenlinux~${commit_hash}"
+		# No version has been provided. Check if there is already a gardenlinux0 version.
+		# If not, the current package will be the first one as long as the build has been triggered
+		# from the main branch. Otherwise, simply use the commit hash for the final package version.
+		if [[ "$git_branch" != "main" ]] || [[ "$git_tags" == *"gardenlinux/${package_version}gardenlinux0"* ]]; then
+			version="${package_version}gardenlinux~${git_commit_hash}"
 		else
 			version="${package_version}gardenlinux0"
 		fi
