@@ -50,8 +50,13 @@ case "$action" in
 
 		;;
 	"list")
-		tag="$1"; shift
-		get "releases/tags/$tag" | jq -r '.assets[] | .browser_download_url'
+		reference="$1"; shift
+		if [[ "$reference" == "latest" ]]; then
+			api_url="releases/latest"
+		else
+			api_url="releases/tags/$reference"
+		fi
+		get "$api_url" | jq -r '.assets[] | .browser_download_url'
 
 		;;
 	"create")

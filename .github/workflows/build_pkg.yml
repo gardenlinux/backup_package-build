@@ -14,13 +14,13 @@ on:
       build_profiles:
         type: string
         default: ""
+      build_dependencies:
+          type: string
+          default: ""
       source:
         type: string
         default: ""
       debian_source:
-        type: string
-        default: ""
-      dependencies:
         type: string
         default: ""
       email:
@@ -70,11 +70,11 @@ jobs:
       - name: fetch dependencies
         run: |
           mkdir _pkgs
-          while IFS=@ read -r repo tag; do
-            ./scripts/gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
+          while IFS=@ read -r repo reference; do
+            ./scripts/gh_release "${{ github.token }}" "$repo" list "$reference" | grep '\.deb$' | while read -r url; do
               (cd _pkgs && wget "$url")
             done
-          done <<< '${{ inputs.dependencies }}'
+          done <<< '${{ inputs.build_dependencies }}'
           ls -lah _pkgs
           (cd _pkgs && dpkg-scanpackages --multiversion . > Packages)
           cat _pkgs/Packages
@@ -143,11 +143,11 @@ jobs:
       - name: fetch dependencies
         run: |
           mkdir _pkgs
-          while IFS=@ read -r repo tag; do
-            ./scripts/gh_release "${{ github.token }}" "$repo" list "$tag" | grep '\.deb$' | while read -r url; do
+          while IFS=@ read -r repo reference; do
+            ./scripts/gh_release "${{ github.token }}" "$repo" list "$reference" | grep '\.deb$' | while read -r url; do
               (cd _pkgs && wget "$url")
             done
-          done <<< '${{ inputs.dependencies }}'
+          done <<< '${{ inputs.build_dependencies }}'
           ls -lah _pkgs
           (cd _pkgs && dpkg-scanpackages --multiversion . > Packages)
           cat _pkgs/Packages
