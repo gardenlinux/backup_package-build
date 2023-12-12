@@ -51,7 +51,6 @@ Input Parameters available in `build_pkg.yml`:
 | --------- | ---- | ------------|
 |`ref`|**Type:** string<br>**Default:** `${{ github.sha }}`| The ref (commit or branch) that should be checked out from the `package-build` repo while processing the package build.|
 |`build_container`|**Type:** string<br>**Default:** `ghcr.io/gardenlinux/package-build`| The container image used for building the package.|
-|`dependencies`|**Type:** string| Comma-separated list of repositories and tags to fetch dependencies from.|
 |`source`|**Type:** string| The source name of the package. There are three values that one can choose from:<br>- Debian Source Package: `{SOURCE PACKAGE NAME}`<br>- Git Source: `git+{GIT URL}`<br>- Native Build: `native`|
 |`debian_source`|**Type:** string| Defines from which source the `debian/` directory should be used. There are three values that one can choose from:<br>- Debian Source Package: `{SOURCE PACKAGE NAME}`<br>- Git Source: `git+{GIT URL}`<br>- Native Build: `native`|
 |`email`|**Type:** string<br>**Default:** `contact@gardenlinux.io`| The Debian package maintainer email.|
@@ -60,6 +59,7 @@ Input Parameters available in `build_pkg.yml`:
 |`message`|**Type:** string<br>**Default:** `Rebuild for Garden Linux.`| The changelog entry message for the package build.|
 |`build_option`|**Type:** string| Additional build options for the package build. Build option `terse` is always set.|
 |`build_profiles`|**Type:** string| Additional build profiles for the package build.|
+|`build_dependencies`|**Type:** string| List of build dependencies that should be included in the build. Each new line is a new dependency.<br><br>The format looks like this:<br>`{REPO}@{"latest" \| GIT TAG}` <br>`gardenlinux/package-libyang2@latest`<br>`gardenlinux/package-libyang2@gardenlinux/2.1.128-0gardenlinux0`|
 |`git_filter`|**Type:** string<br>**Default:** `.*`<br>**Scope:** `source: git`| This parameter let's you filter Git tags that should be skipped for the upstream version determination. |
 |`git_tag_match`|**Type:** string<br>**Default:** `(.*)`<br>**Scope:** `source: git`| This parameter defines what part of a given Git Tag is considered to be the upstream version. The first regex match group is always the designated upstream version. |
 
