@@ -49,8 +49,7 @@ The `build_pkg.yml` workflow can be triggered by calling it with specific input 
 Input Parameters available in `build_pkg.yml`:
 | Parameter | Type | Description |
 | --------- | ---- | ------------|
-|`repository`|**Type:** string<br>**Default:** `${{ github.repository }}`| The repository to build the package from.|
-|`ref`|**Type:** string<br>**Default:** `${{ github.sha }}`| The ref (commit or branch) to build the package from.|
+|`ref`|**Type:** string<br>**Default:** `${{ github.sha }}`| The ref (commit or branch) that should be checked out from the `package-build` repo while processing the package build.|
 |`build_container`|**Type:** string<br>**Default:** `ghcr.io/gardenlinux/package-build`| The container image used for building the package.|
 |`dependencies`|**Type:** string| Comma-separated list of repositories and tags to fetch dependencies from.|
 |`source`|**Type:** string| The source name of the package. There are three values that one can choose from:<br>- Debian Source Package: `{SOURCE PACKAGE NAME}`<br>- Git Source: `git+{GIT URL}`<br>- Native Build: `native`|
