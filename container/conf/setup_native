@@ -37,7 +37,16 @@ function export_elf (
 		new_file="/native/$(basename "$file")"
 	fi
 	[ ! -e "$new_file" ]
-	bbe -e 's|/usr/lib/gcc-cross/|///////usr/lib/gcc/|;s|/usr/libexec/gcc-cross/|///////usr/libexec/gcc/|' < "$file" > "$new_file"
+
+	cat < "$file" \
+	| bbe -e 's|/usr/lib/gcc-cross/|///////usr/lib/gcc/|' \
+	| bbe -e 's|/usr/libexec/gcc-cross/|///////usr/libexec/gcc/|' \
+	| bbe -e 's|/x86_64-linux-gnu/include/c++/13/x86_64-linux-gnu|//////////////////include/x86_64-linux-gnu/c++/13|' \
+	| bbe -e 's|/x86_64-linux-gnu/include/c++/|//////////////////include/c++/|' \
+	| bbe -e 's|/aarch64-linux-gnu/include/c++/13/aarch64-linux-gnu|///////////////////include/aarch64-linux-gnu/c++/13|' \
+	| bbe -e 's|/aarch64-linux-gnu/include/c++/|///////////////////include/c++/|' \
+	> "$new_file"
+
 	if [ -x "$file" ]; then
 		chmod +x "$new_file"
 	fi

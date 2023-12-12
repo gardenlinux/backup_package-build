@@ -51,8 +51,11 @@ RUN [ "/native/bash", "-c", "PATH=/native:$PATH ./setup_native import $(awk '{ p
 
 # Run gcc test after setup_native and then clean up /tmp
 RUN gcc --print-search-dir \
-    && echo 'int main() { return 0; }' > main.c \
+    && printf '#include <stdio.h>\nint main() { printf("hello\\n"); return 0; }' > main.c \
     && gcc -o main main.c \
+    && ./main \
+	&& printf '#include <iostream>\nint main() { std::cout << "hello" << std::endl; return 0; }' > main.cpp \
+    && g++ -o main main.cpp \
     && ./main \
     && find /tmp -mindepth 1 -delete
 
