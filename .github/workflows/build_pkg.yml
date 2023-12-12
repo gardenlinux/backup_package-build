@@ -2,12 +2,9 @@ name: build
 on:
   workflow_call:
     inputs:
-      repository:
-        type: string
-        default: ${{ github.repository }}
       ref:
         type: string
-        default: ${{ github.sha }}
+        default: main
       build_container:
         type: string
         default: ghcr.io/gardenlinux/package-build
@@ -59,11 +56,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gardenlinux/package-build
+          ref: ${{ inputs.ref }}
       - run: mkdir input output
       - uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.repository }}
-          ref: ${{ inputs.ref }}
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
           path: input
           fetch-tags: true
           fetch-depth: 0
@@ -125,6 +123,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gardenlinux/package-build
+          ref: ${{ inputs.ref }}
       - name: setup binfmt
         if: ${{ matrix.arch == 'arm64v8' }}
         run: sudo podman run --privileged ghcr.io/gardenlinux/binfmt_container
@@ -190,6 +189,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gardenlinux/package-build
+          ref: ${{ inputs.ref }}
       - name: check if ${{ env.pkg }} already released
         id: check
         run: |
