@@ -109,7 +109,7 @@ apt_source() (
 
 git_source() (
 	IFS='#' read -r url ref <<< "$1"
-	git clone "$url" src.git
+	git clone --jobs $(nproc) --shallow-submodules --recurse-submodules "$url" src.git
 	git -C src.git archive --prefix src/ "$(get_git_tag)" > orig.tar
 	rm -rf src.git
 	tar -x < orig.tar
