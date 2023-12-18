@@ -111,6 +111,7 @@ git_source() (
 	IFS='#' read -r url ref <<< "$1"
 	git clone --jobs $(nproc) --shallow-submodules --recurse-submodules "$url" src.git
 	git -C src.git archive --prefix src/ "$(get_git_tag)" > orig.tar
+	git -C src.git submodule foreach --recursive "git archive --prefix=src/\$displaypath/ --output=\"$(pwd)/\$sha1.tar\" \"\$sha1\" && tar --concatenate --file=\"$(pwd)/orig.tar\" \"$(pwd)/\$sha1.tar\" && rm \"$(pwd)/\$sha1.tar\""
 	rm -rf src.git
 	tar -x < orig.tar
 )
